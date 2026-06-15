@@ -1,0 +1,11 @@
+version: '3.8'
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    container_name: carpool_db
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: carpool
+    ports:
+      - "5432:5432"
