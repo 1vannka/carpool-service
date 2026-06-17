@@ -1,4 +1,4 @@
-package java_projects.backend;
+package com.carpool;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
