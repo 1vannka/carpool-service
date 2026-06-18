@@ -1,6 +1,6 @@
 package com.carpool.infrastructure.security;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

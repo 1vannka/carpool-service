@@ -1,9 +1,10 @@
 package com.carpool.infrastructure.db.repository;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.repository.UserRepositoryPort;
 import com.carpool.infrastructure.db.entity.UserEntity;
 import com.carpool.infrastructure.db.common.Mapper;
+import com.carpool.infrastructure.db.repository.jpa.JpaUserRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;

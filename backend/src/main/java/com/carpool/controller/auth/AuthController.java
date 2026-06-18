@@ -3,7 +3,7 @@ package com.carpool.controller.auth;
 import com.carpool.controller.dto.auth.AuthResponse;
 import com.carpool.controller.dto.auth.LoginRequest;
 import com.carpool.controller.dto.auth.RegisterRequest;
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.AuthService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,19 +26,15 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         User user = authWebMapper.toDomain(request);
-        String token = authService.register(user, request.getPassword());
+        String token = authService.register(user, request.password());
 
-        AuthResponse response = new AuthResponse();
-        response.setToken(token);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        String token = authService.login(request.getEmail(), request.getPassword());
+        String token = authService.login(request.email(), request.password());
 
-        AuthResponse response = new AuthResponse();
-        response.setToken(token);
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(new AuthResponse(token));
     }
 }

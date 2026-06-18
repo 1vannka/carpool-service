@@ -1,4 +1,4 @@
-package com.carpool.domain.model;
+package com.carpool.domain.model.user;
 
 public class User {
     private Long id;

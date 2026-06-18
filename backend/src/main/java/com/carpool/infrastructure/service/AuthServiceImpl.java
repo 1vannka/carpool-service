@@ -1,6 +1,6 @@
 package com.carpool.infrastructure.service;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.repository.UserRepositoryPort;
 import com.carpool.domain.service.AuthService;
 import com.carpool.infrastructure.security.JwtService;

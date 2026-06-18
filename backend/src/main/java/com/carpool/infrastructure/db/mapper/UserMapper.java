@@ -1,6 +1,6 @@
 package com.carpool.infrastructure.db.mapper;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.infrastructure.db.common.Mapper;
 import com.carpool.infrastructure.db.entity.UserEntity;
 import org.springframework.stereotype.Component;
@@ -14,6 +14,7 @@ public class UserMapper implements Mapper<UserEntity, User> {
         }
 
         User user = new User();
+        user.setId(entity.getId());
         user.setEmail(entity.getEmail());
         user.setPasswordHash(entity.getPasswordHash());
         user.setFirstName(entity.getFirstName());

@@ -1,60 +1,27 @@
-package com.carpool.infrastructure.db.entity;
+package com.carpool.domain.model.trip;
 
-import com.carpool.domain.model.trip.TripStatus;
-import jakarta.persistence.*;
 import org.locationtech.jts.geom.LineString;
 import java.time.OffsetDateTime;
 
-@Entity
-@Table(name = "trips")
-public class TripEntity {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+public class Trip {
     private Long id;
-
-    @Column(name = "driver_id", nullable = false)
     private Long driverId;
-
-    @Column(name = "office_id", nullable = false)
     private Long officeId;
-
-    @Column(name = "departure_time", nullable = false)
     private OffsetDateTime departureTime;
-
-    @Column(name = "estimated_duration", nullable = false)
     private Integer estimatedDuration;
-
-    @Column(name = "total_seats", nullable = false)
     private Integer totalSeats;
-
-    @Column(name = "available_seats", nullable = false)
     private Integer availableSeats;
-
-    @Column(name = "car_model", nullable = false)
     private String carModel;
-
-    @Column(name = "car_color", nullable = false)
     private String carColor;
-
-    @Column(name = "car_plate", nullable = false)
     private String carPlate;
-
-    @Column(name = "route_path", nullable = false, columnDefinition = "geometry(LineString,4326)")
     private LineString routePath;
-
-    @Version
-    @Column(nullable = false)
-    private Long version = 0L;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    private Long version;
     private TripStatus status;
 
-    public TripEntity() {
+    public Trip() {
     }
 
-    public TripEntity(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status) {
+    public Trip(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status) {
         this.id = id;
         this.driverId = driverId;
         this.officeId = officeId;

@@ -1,6 +1,6 @@
 package com.carpool.domain.repository;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 
 import java.util.Optional;
 

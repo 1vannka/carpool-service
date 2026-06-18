@@ -1,6 +1,6 @@
 package com.carpool.infrastructure.seeder;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.repository.UserRepositoryPort;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;

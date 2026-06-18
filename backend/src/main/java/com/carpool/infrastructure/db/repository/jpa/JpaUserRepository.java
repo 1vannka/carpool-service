@@ -1,4 +1,4 @@
-package com.carpool.infrastructure.db.repository;
+package com.carpool.infrastructure.db.repository.jpa;
 
 import com.carpool.infrastructure.db.entity.UserEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

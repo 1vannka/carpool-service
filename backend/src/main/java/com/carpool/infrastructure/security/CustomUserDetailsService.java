@@ -1,6 +1,6 @@
 package com.carpool.infrastructure.security;
 
-import com.carpool.domain.model.User;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.repository.UserRepositoryPort;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
