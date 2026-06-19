@@ -5,5 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface OfficeJpaRepository extends JpaRepository<OfficeEntity, Long> {
+public interface JpaOfficeRepository extends JpaRepository<OfficeEntity, Long> {
 }

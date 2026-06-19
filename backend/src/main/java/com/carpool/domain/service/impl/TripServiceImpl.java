@@ -3,6 +3,7 @@ package com.carpool.domain.service.impl;
 import com.carpool.domain.exception.ActiveTripAlreadyExistsException;
 import com.carpool.domain.model.trip.Trip;
 import com.carpool.domain.model.trip.TripStatus;
+import com.carpool.domain.repository.RideRequestRepositoryPort;
 import com.carpool.domain.repository.TripRepositoryPort;
 import com.carpool.domain.service.TripService;
 
@@ -12,17 +13,22 @@ import java.util.Optional;
 public class TripServiceImpl implements TripService {
 
     private final TripRepositoryPort tripRepositoryPort;
+    private final RideRequestRepositoryPort rideRequestRepositoryPort;
 
-    public TripServiceImpl(TripRepositoryPort tripRepositoryPort) {
+    public TripServiceImpl(TripRepositoryPort tripRepositoryPort, RideRequestRepositoryPort rideRequestRepositoryPort) {
         this.tripRepositoryPort = tripRepositoryPort;
+        this.rideRequestRepositoryPort = rideRequestRepositoryPort;
     }
 
     @Override
     public Trip createTrip(Trip trip) {
         validateDepartureTime(trip.getDepartureTime());
 
-        Optional<Trip> activeTrip = tripRepositoryPort.findActiveTripByDriverId(trip.getDriverId());
+        if (rideRequestRepositoryPort.findPendingByPassengerId(trip.getDriverId()).isPresent()) {
+            throw new IllegalStateException("У вас уже есть активная заявка пассажира. Отмените её, чтобы стать водителем.");
+        }
 
+        Optional<Trip> activeTrip = tripRepositoryPort.findActiveTripByDriverId(trip.getDriverId());
         if (activeTrip.isPresent()) {
             throw new ActiveTripAlreadyExistsException("У вас уже есть активная поездка. Отредактируйте или отмените её.");
         }
