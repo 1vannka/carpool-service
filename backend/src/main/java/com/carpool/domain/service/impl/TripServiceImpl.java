@@ -8,6 +8,7 @@ import com.carpool.domain.repository.TripRepositoryPort;
 import com.carpool.domain.service.TripService;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public class TripServiceImpl implements TripService {
@@ -74,6 +75,25 @@ public class TripServiceImpl implements TripService {
     @Override
     public Optional<Trip> getActiveTrip(Long driverId) {
         return tripRepositoryPort.findActiveTripByDriverId(driverId);
+    }
+
+    @Override
+    public List<Trip> findMatchingTripsForPassenger(Long passengerId) {
+        var activeRequest = rideRequestRepositoryPort.findPendingByPassengerId(passengerId)
+                .orElseThrow(() -> new IllegalStateException("Сначала создайте заявку с точкой посадки"));
+
+        OffsetDateTime timeMin = activeRequest.getTargetTime().minusMinutes(activeRequest.getToleranceTime());
+        OffsetDateTime timeMax = activeRequest.getTargetTime().plusMinutes(activeRequest.getToleranceTime());
+
+        double searchRadiusMeters = 1500.0;
+
+        return tripRepositoryPort.findMatchingTrips(
+                activeRequest.getOfficeId(),
+                timeMin,
+                timeMax,
+                activeRequest.getPickupLocation(),
+                searchRadiusMeters
+        );
     }
 
     private void validateDepartureTime(OffsetDateTime departureTime) {

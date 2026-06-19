@@ -11,6 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/trips")
 public class TripController {
@@ -57,5 +60,19 @@ public class TripController {
     public ResponseEntity<TripResponse> cancelTrip(@PathVariable Long id) {
         Trip canceledTrip = tripService.cancelTrip(id);
         return ResponseEntity.ok(tripWebMapper.toDto(canceledTrip));
+    }
+
+    @GetMapping("/matching")
+    public ResponseEntity<List<TripResponse>> getMatchingTrips(
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+
+        Long passengerId = userDetails.getUser().getId();
+        List<Trip> matchingTrips = tripService.findMatchingTripsForPassenger(passengerId);
+
+        List<TripResponse> response = matchingTrips.stream()
+                .map(tripWebMapper::toDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 }

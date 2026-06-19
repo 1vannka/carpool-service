@@ -6,6 +6,6 @@ import java.util.List;
 public interface OfficeService {
     Office createOffice(Office office);
     Office updateOffice(Long id, Office updatedData);
-    List<Office> getAllOffices();
+    List<Office> getOffices(String city);
     void deleteOffice(Long id);
 }

@@ -33,8 +33,11 @@ public class OfficeServiceImpl implements OfficeService {
     }
 
     @Override
-    public List<Office> getAllOffices() {
-        return officeRepositoryPort.findAll();
+    public List<Office> getOffices(String city) {
+        if (city == null || city.isBlank()) {
+            return officeRepositoryPort.findAll();
+        }
+        return officeRepositoryPort.findByCity(city);
     }
 
     @Override

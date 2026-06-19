@@ -36,6 +36,13 @@ public class OfficeRepositoryAdapter implements OfficeRepositoryPort {
     }
 
     @Override
+    public List<Office> findByCity(String city) {
+        return jpaOfficeRepository.findByCity(city).stream()
+                .map(officeDbMapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Office> findById(Long id) {
         return jpaOfficeRepository.findById(id)
                 .map(officeDbMapper::toDomain);

@@ -26,10 +26,13 @@ public class OfficeController {
     }
 
     @GetMapping
-    public ResponseEntity<List<OfficeResponse>> getAllOffices() {
-        List<OfficeResponse> offices = officeService.getAllOffices().stream()
+    public ResponseEntity<List<OfficeResponse>> getOffices(
+            @RequestParam(required = false) String city) {
+
+        List<OfficeResponse> offices = officeService.getOffices(city).stream()
                 .map(officeWebMapper::toDto)
                 .collect(Collectors.toList());
+
         return ResponseEntity.ok(offices);
     }
 
