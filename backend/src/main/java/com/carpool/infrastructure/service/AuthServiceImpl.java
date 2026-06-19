@@ -33,6 +33,10 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public String register(User user, String rawPassword) {
+        if (!user.getEmail().endsWith("@company.com")) {
+            throw new IllegalArgumentException("Регистрация доступна только для сотрудников компании");
+        }
+
         if (userRepositoryPort.existsByEmail(user.getEmail())) {
             throw new RuntimeException("Пользователь с таким email уже существует");
         }

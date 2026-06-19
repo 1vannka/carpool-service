@@ -36,4 +36,9 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     public boolean existsByEmail(String email) {
         return jpaUserRepository.existsByEmail(email);
     }
+
+    @Override
+    public Optional<User> findById(Long id) {
+        return jpaUserRepository.findById(id).map(userMapper::toDomain);
+    }
 }

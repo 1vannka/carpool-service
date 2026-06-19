@@ -6,6 +6,7 @@ import com.carpool.domain.model.trip.TripStatus;
 import com.carpool.domain.repository.TripRepositoryPort;
 import com.carpool.domain.service.TripService;
 
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 public class TripServiceImpl implements TripService {
@@ -18,6 +19,8 @@ public class TripServiceImpl implements TripService {
 
     @Override
     public Trip createTrip(Trip trip) {
+        validateDepartureTime(trip.getDepartureTime());
+
         Optional<Trip> activeTrip = tripRepositoryPort.findActiveTripByDriverId(trip.getDriverId());
 
         if (activeTrip.isPresent()) {
@@ -32,6 +35,8 @@ public class TripServiceImpl implements TripService {
 
     @Override
     public Trip updateTrip(Long tripId, Trip updatedData) {
+        validateDepartureTime(updatedData.getDepartureTime());
+
         Trip existingTrip = tripRepositoryPort.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
 
@@ -63,5 +68,21 @@ public class TripServiceImpl implements TripService {
     @Override
     public Optional<Trip> getActiveTrip(Long driverId) {
         return tripRepositoryPort.findActiveTripByDriverId(driverId);
+    }
+
+    private void validateDepartureTime(OffsetDateTime departureTime) {
+        if (departureTime == null) {
+            throw new IllegalArgumentException("Время отправления не может быть пустым");
+        }
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (departureTime.isBefore(now)) {
+            throw new IllegalArgumentException("Время отправления не может быть в прошлом");
+        }
+
+        if (departureTime.isAfter(now.plusHours(24))) {
+            throw new IllegalArgumentException("Поездку можно запланировать не более чем на 24 часа вперед");
+        }
     }
 }
