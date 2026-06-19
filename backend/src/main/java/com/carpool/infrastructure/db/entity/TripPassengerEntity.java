@@ -1,5 +1,6 @@
 package com.carpool.infrastructure.db.entity;
 
+import com.carpool.domain.model.trip.BookingStatus;
 import jakarta.persistence.*;
 
 @Entity
@@ -9,20 +10,16 @@ public class TripPassengerEntity {
     @EmbeddedId
     private TripPassengerId id;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("tripId")
-    @JoinColumn(name = "trip_id")
-    private TripEntity trip;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("passengerId")
-    @JoinColumn(name = "passenger_id")
-    private UserEntity passenger;
-
-    @Column(nullable = false)
-    private String status = "WAITING_APPROVAL";
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private BookingStatus status;
 
     public TripPassengerEntity() {}
+
+    public TripPassengerEntity(TripPassengerId id, BookingStatus status) {
+        this.id = id;
+        this.status = status;
+    }
 
     public TripPassengerId getId() {
         return id;
@@ -32,27 +29,11 @@ public class TripPassengerEntity {
         this.id = id;
     }
 
-    public TripEntity getTrip() {
-        return trip;
-    }
-
-    public void setTrip(TripEntity trip) {
-        this.trip = trip;
-    }
-
-    public UserEntity getPassenger() {
-        return passenger;
-    }
-
-    public void setPassenger(UserEntity passenger) {
-        this.passenger = passenger;
-    }
-
-    public String getStatus() {
+    public BookingStatus getStatus() {
         return status;
     }
 
-    public void setStatus(String status) {
+    public void setStatus(BookingStatus status) {
         this.status = status;
     }
 }
