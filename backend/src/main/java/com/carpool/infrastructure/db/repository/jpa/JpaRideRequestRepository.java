@@ -34,4 +34,7 @@ public interface JpaRideRequestRepository extends JpaRepository<RideRequestEntit
     @Modifying
     @Query(value = "UPDATE ride_requests SET status = 'EXPIRED' WHERE status = 'PENDING' AND target_time + (tolerance_time * interval '1 minute') < :now", nativeQuery = true)
     int updateExpiredRequests(@Param("now") OffsetDateTime now);
+
+    @Query(value = "SELECT passenger_id FROM ride_requests WHERE status = 'PENDING' AND target_time + (tolerance_time * interval '1 minute') < :now", nativeQuery = true)
+    List<Long> findPassengerIdsForExpiredRequests(@Param("now") OffsetDateTime now);
 }

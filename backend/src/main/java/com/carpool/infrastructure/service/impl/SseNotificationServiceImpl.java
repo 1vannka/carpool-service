@@ -1,8 +1,10 @@
-package com.carpool.infrastructure.service;
+package com.carpool.infrastructure.service.impl;
 
 import com.carpool.domain.service.NotificationService;
+import com.carpool.infrastructure.service.SseSubscriptionManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -13,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 @Service
-public class SseNotificationServiceImpl implements NotificationService {
+public class SseNotificationServiceImpl implements NotificationService, SseSubscriptionManager {
     private static final Logger log = LoggerFactory.getLogger(SseNotificationServiceImpl.class);
     private final ConcurrentMap<Long, ConcurrentMap<String, SseEmitter>> userEmitters = new ConcurrentHashMap<>();
 
@@ -58,6 +60,7 @@ public class SseNotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Async
     @Scheduled(fixedRate = 20000)
     public void sendKeepAlivePings() {
         userEmitters.forEach((userId, connections) -> {

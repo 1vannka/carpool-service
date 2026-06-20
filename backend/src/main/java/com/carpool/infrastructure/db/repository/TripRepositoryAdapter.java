@@ -51,4 +51,11 @@ public class TripRepositoryAdapter implements TripRepositoryPort {
                 .map(tripMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public List<Trip> findAvailableTripsByOffice(Long officeId) {
+        return jpaTripRepository.findAvailableByOfficeId(officeId).stream()
+                .map(tripMapper::toDomain)
+                .toList();
+    }
 }

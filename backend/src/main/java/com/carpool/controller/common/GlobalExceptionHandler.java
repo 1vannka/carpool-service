@@ -1,6 +1,7 @@
 package com.carpool.controller.common;
 
 import com.carpool.domain.exception.ActiveTripAlreadyExistsException;
+import com.carpool.domain.exception.OfficeNotFoundException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -57,6 +58,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(SecurityException.class)
     public ResponseEntity<Object> handleSecurityException(SecurityException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OfficeNotFoundException.class)
+    public ResponseEntity<Object> handleOfficeNotFound(OfficeNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", ex.getMessage()));
     }
 }

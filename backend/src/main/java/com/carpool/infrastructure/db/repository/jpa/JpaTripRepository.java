@@ -42,4 +42,7 @@ public interface JpaTripRepository extends JpaRepository<TripEntity, Long> {
     @Modifying
     @Query(value = "UPDATE trips SET status = 'COMPLETED' WHERE status = 'IN_PROGRESS' AND departure_time + ((estimated_duration + 60) * interval '1 minute') <= :now", nativeQuery = true)
     int updateCompletedTrips(@Param("now") OffsetDateTime now);
+
+    @Query("SELECT t FROM TripEntity t WHERE t.officeId = :officeId AND t.status = 'CREATED' AND t.availableSeats > 0")
+    List<TripEntity> findAvailableByOfficeId(@Param("officeId") Long officeId);
 }

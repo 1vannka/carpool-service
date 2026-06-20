@@ -38,9 +38,13 @@ public class RideRequestServiceImpl implements RideRequestService {
     }
 
     @Override
-    public RideRequest cancelRideRequest(Long id) {
+    public RideRequest cancelRideRequest(Long id, Long passengerId) {
         RideRequest request = rideRequestRepositoryPort.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Заявка не найдена"));
+
+        if (!request.getPassengerId().equals(passengerId)) {
+            throw new SecurityException("У вас нет прав на отмену этой заявки");
+        }
 
         if (request.getStatus() != RideRequestStatus.PENDING) {
             throw new IllegalStateException("Можно отменить только активную заявку");

@@ -1,4 +1,4 @@
-package com.carpool.infrastructure.service;
+package com.carpool.infrastructure.service.impl;
 
 import com.carpool.domain.model.auth.TokenPair;
 import com.carpool.domain.model.user.User;

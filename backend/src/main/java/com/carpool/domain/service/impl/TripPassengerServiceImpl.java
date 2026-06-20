@@ -43,6 +43,10 @@ public class TripPassengerServiceImpl implements TripPassengerService {
             throw new IllegalStateException("Вы не можете быть пассажиром в своей же поездке");
         }
 
+        if (tripPassengerRepositoryPort.findByIds(tripId, passengerId).isPresent()) {
+            throw new IllegalStateException("Вы уже отправляли заявку на эту поездку");
+        }
+
         RideRequest activeRequest = rideRequestRepositoryPort.findPendingByPassengerId(passengerId)
                 .orElseThrow(() -> new IllegalStateException("Сначала создайте заявку с точкой посадки"));
 
@@ -93,7 +97,12 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         TripPassenger request = tripPassengerRepositoryPort.findByIds(tripId, passengerId)
                 .orElseThrow(() -> new IllegalArgumentException("Заявка пассажира не найдена"));
 
-        tripPassengerRepositoryPort.delete(tripId, passengerId);
+        if (request.getStatus() == BookingStatus.REJECTED) {
+            throw new IllegalStateException("Заявка уже отклонена");
+        }
+
+        request.setStatus(BookingStatus.REJECTED);
+        tripPassengerRepositoryPort.save(request);
 
         notificationService.sendNotification(
                 passengerId,
@@ -105,6 +114,10 @@ public class TripPassengerServiceImpl implements TripPassengerService {
     public void cancelPassengerRequest(Long tripId, Long passengerId) {
         TripPassenger request = tripPassengerRepositoryPort.findByIds(tripId, passengerId)
                 .orElseThrow(() -> new IllegalArgumentException("Заявка пассажира не найдена"));
+
+        if (request.getStatus() == BookingStatus.REJECTED) {
+            throw new IllegalStateException("Ваша заявка уже отклонена водителем, ее нельзя отменить");
+        }
 
         Trip trip = tripRepositoryPort.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));

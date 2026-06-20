@@ -5,6 +5,7 @@ import com.carpool.domain.repository.OfficeRepositoryPort;
 import com.carpool.infrastructure.db.mapper.OfficeDbMapper;
 import com.carpool.infrastructure.db.repository.jpa.JpaOfficeRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +23,7 @@ public class OfficeRepositoryAdapter implements OfficeRepositoryPort {
     }
 
     @Override
+    @Transactional
     public Office save(Office office) {
         var entity = officeDbMapper.toEntity(office);
         var savedEntity = jpaOfficeRepository.save(entity);

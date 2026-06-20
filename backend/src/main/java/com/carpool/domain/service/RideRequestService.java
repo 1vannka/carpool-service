@@ -5,6 +5,6 @@ import java.util.Optional;
 
 public interface RideRequestService {
     RideRequest createRideRequest(RideRequest request);
-    RideRequest cancelRideRequest(Long id);
+    RideRequest cancelRideRequest(Long id, Long passengerId);
     Optional<RideRequest> getActiveRequest(Long passengerId);
 }

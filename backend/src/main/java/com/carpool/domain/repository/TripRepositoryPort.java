@@ -12,4 +12,5 @@ public interface TripRepositoryPort {
     Optional<Trip> findActiveTripByDriverId(Long driverId);
     Optional<Trip> findById(Long id);
     List<Trip> findMatchingTrips(Long officeId, OffsetDateTime timeMin, OffsetDateTime timeMax, Point pickupLocation, double radiusMeters);
+    List<Trip> findAvailableTripsByOffice(Long officeId);
 }

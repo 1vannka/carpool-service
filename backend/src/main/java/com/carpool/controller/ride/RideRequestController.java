@@ -4,10 +4,12 @@ import com.carpool.controller.dto.ride.RideRequestCreateRequest;
 import com.carpool.controller.dto.ride.RideRequestResponse;
 import com.carpool.domain.model.ride.RideRequest;
 import com.carpool.domain.service.RideRequestService;
-import com.carpool.infrastructure.security.UserDetailsImpl;
+import com.carpool.domain.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,19 +18,23 @@ public class RideRequestController {
 
     private final RideRequestService rideRequestService;
     private final RideRequestWebMapper webMapper;
+    private final UserService userService;
 
-    public RideRequestController(RideRequestService rideRequestService, RideRequestWebMapper webMapper) {
+    public RideRequestController(RideRequestService rideRequestService, RideRequestWebMapper webMapper, UserService userService) {
         this.rideRequestService = rideRequestService;
         this.webMapper = webMapper;
+        this.userService = userService;
     }
 
     @PostMapping
     public ResponseEntity<RideRequestResponse> createRideRequest(
-            @RequestBody RideRequestCreateRequest request,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @Valid @RequestBody RideRequestCreateRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
 
         RideRequest domainRequest = webMapper.toDomain(request);
-        domainRequest.setPassengerId(userDetails.getUser().getId());
+        domainRequest.setPassengerId(passengerId);
 
         RideRequest createdRequest = rideRequestService.createRideRequest(domainRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(webMapper.toDto(createdRequest));
@@ -36,17 +42,24 @@ public class RideRequestController {
 
     @GetMapping("/my-active")
     public ResponseEntity<RideRequestResponse> getMyActiveRequest(
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @AuthenticationPrincipal UserDetails userDetails) {
 
-        return rideRequestService.getActiveRequest(userDetails.getUser().getId())
+        Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
+
+        return rideRequestService.getActiveRequest(passengerId)
                 .map(webMapper::toDto)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> cancelRideRequest(@PathVariable Long id) {
-        rideRequestService.cancelRideRequest(id);
+    public ResponseEntity<Void> cancelRideRequest(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
+        rideRequestService.cancelRideRequest(id, passengerId);
+
         return ResponseEntity.noContent().build();
     }
 }

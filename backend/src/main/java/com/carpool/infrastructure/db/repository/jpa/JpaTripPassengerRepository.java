@@ -17,4 +17,7 @@ public interface JpaTripPassengerRepository extends JpaRepository<TripPassengerE
     @Query("UPDATE TripPassengerEntity p SET p.status = 'REJECTED' WHERE p.status = 'WAITING_APPROVAL' AND p.id.tripId IN (SELECT t.id FROM TripEntity t WHERE t.departureTime <= :now)")
     int updateExpiredPassengerRequests(@Param("now") OffsetDateTime now);
     List<TripPassengerEntity> findByIdTripId(Long tripId);
+
+    @Query(value = "SELECT p.passenger_id FROM trip_passengers p JOIN trips t ON p.trip_id = t.id WHERE p.status = 'WAITING_APPROVAL' AND t.departure_time <= :now", nativeQuery = true)
+    List<Long> findPassengerIdsForExpiredApprovals(@Param("now") OffsetDateTime now);
 }

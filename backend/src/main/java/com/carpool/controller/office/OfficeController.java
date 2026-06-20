@@ -5,6 +5,7 @@ import com.carpool.controller.dto.office.OfficeResponse;
 import com.carpool.controller.dto.office.OfficeUpdateRequest;
 import com.carpool.domain.model.office.Office;
 import com.carpool.domain.service.OfficeService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -38,7 +39,7 @@ public class OfficeController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<OfficeResponse> createOffice(@RequestBody OfficeCreateRequest request) {
+    public ResponseEntity<OfficeResponse> createOffice(@Valid @RequestBody OfficeCreateRequest request) {
         Office officeToCreate = officeWebMapper.toDomain(request);
         Office createdOffice = officeService.createOffice(officeToCreate);
         return ResponseEntity.status(HttpStatus.CREATED).body(officeWebMapper.toDto(createdOffice));
@@ -48,7 +49,7 @@ public class OfficeController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<OfficeResponse> updateOffice(
             @PathVariable Long id,
-            @RequestBody OfficeUpdateRequest request) {
+            @Valid @RequestBody OfficeUpdateRequest request) {
         Office officeUpdateData = officeWebMapper.toDomain(request);
         Office updatedOffice = officeService.updateOffice(id, officeUpdateData);
         return ResponseEntity.ok(officeWebMapper.toDto(updatedOffice));

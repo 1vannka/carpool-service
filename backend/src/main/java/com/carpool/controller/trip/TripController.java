@@ -92,4 +92,15 @@ public class TripController {
 
         return ResponseEntity.ok(response);
     }
+
+    @GetMapping
+    public ResponseEntity<List<TripResponse>> getAvailableTrips(
+            @RequestParam Long officeId) {
+
+        List<TripResponse> response = tripService.getAvailableTripsForOffice(officeId).stream()
+                .map(tripWebMapper::toDto)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
 }

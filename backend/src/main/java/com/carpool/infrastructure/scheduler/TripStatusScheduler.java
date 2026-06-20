@@ -1,5 +1,6 @@
 package com.carpool.infrastructure.scheduler;
 
+import com.carpool.domain.service.NotificationService;
 import com.carpool.infrastructure.db.repository.jpa.JpaRideRequestRepository;
 import com.carpool.infrastructure.db.repository.jpa.JpaTripPassengerRepository;
 import com.carpool.infrastructure.db.repository.jpa.JpaTripRepository;
@@ -11,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 
 @Component
 public class TripStatusScheduler {
@@ -20,13 +22,16 @@ public class TripStatusScheduler {
     private final JpaTripRepository jpaTripRepository;
     private final JpaTripPassengerRepository jpaTripPassengerRepository;
     private final JpaRideRequestRepository jpaRideRequestRepository;
+    private final NotificationService notificationService;
 
     public TripStatusScheduler(JpaTripRepository jpaTripRepository,
                                JpaTripPassengerRepository jpaTripPassengerRepository,
-                               JpaRideRequestRepository jpaRideRequestRepository) {
+                               JpaRideRequestRepository jpaRideRequestRepository,
+                               NotificationService notificationService) {
         this.jpaTripRepository = jpaTripRepository;
         this.jpaTripPassengerRepository = jpaTripPassengerRepository;
         this.jpaRideRequestRepository = jpaRideRequestRepository;
+        this.notificationService = notificationService;
     }
 
     @Scheduled(cron = "0 * * * * *")
@@ -34,13 +39,24 @@ public class TripStatusScheduler {
     public void updateStatusesJob() {
         OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
 
+        List<Long> expiredApprovalPassengerIds = jpaTripPassengerRepository.findPassengerIdsForExpiredApprovals(now);
+        List<Long> expiredRequestPassengerIds = jpaRideRequestRepository.findPassengerIdsForExpiredRequests(now);
+
         int startedTrips = jpaTripRepository.updateStartedTrips(now);
         int completedTrips = jpaTripRepository.updateCompletedTrips(now);
         int rejectedPassengers = jpaTripPassengerRepository.updateExpiredPassengerRequests(now);
         int expiredRequests = jpaRideRequestRepository.updateExpiredRequests(now);
 
+        expiredApprovalPassengerIds.forEach(id ->
+                notificationService.sendNotification(id, "Время выезда наступило. Ваша заявка отклонена автоматически")
+        );
+
+        expiredRequestPassengerIds.forEach(id ->
+                notificationService.sendNotification(id, "Время ожидания истекло. Заявка переведена в архив")
+        );
+
         if (startedTrips > 0 || completedTrips > 0 || rejectedPassengers > 0 || expiredRequests > 0) {
-            log.info("Очистка БД: начато поездок - {}, завершено - {}, отклонено пассажиров - {}, протухло заявок - {}",
+            log.info("Очистка БД: начато поездок - {}, завершено - {}, отклонено пассажиров - {}, истекло заявок - {}",
                     startedTrips, completedTrips, rejectedPassengers, expiredRequests);
         }
     }

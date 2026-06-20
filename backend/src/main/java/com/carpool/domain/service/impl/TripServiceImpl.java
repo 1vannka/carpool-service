@@ -166,4 +166,12 @@ public class TripServiceImpl implements TripService {
             throw new IllegalArgumentException("Поездку можно запланировать не более чем на 24 часа вперед");
         }
     }
+
+    @Override
+    public List<Trip> getAvailableTripsForOffice(Long officeId) {
+        if (officeId == null) {
+            throw new IllegalArgumentException("ID офиса обязателен для поиска поездок");
+        }
+        return tripRepositoryPort.findAvailableTripsByOffice(officeId);
+    }
 }
