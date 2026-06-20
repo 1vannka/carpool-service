@@ -56,7 +56,7 @@ public class TripPassengerController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{tripId}/passengers/my-request")
+    @DeleteMapping("/passengers/my-request")
     public ResponseEntity<Void> cancelMyRequest(
             @PathVariable Long tripId,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {

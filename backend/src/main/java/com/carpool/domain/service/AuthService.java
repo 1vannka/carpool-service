@@ -9,4 +9,5 @@ public interface AuthService {
     TokenPair refreshTokens(String refreshToken);
     void logout(Long userId, String refreshToken);
     void logoutAll(Long userId);
+    Long getUserIdByEmail(String email);
 }

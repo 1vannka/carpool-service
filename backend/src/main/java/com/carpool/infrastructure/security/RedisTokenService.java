@@ -1,5 +1,8 @@
 package com.carpool.infrastructure.security;
 
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -31,9 +34,14 @@ public class RedisTokenService {
     }
 
     public void deleteAllUserTokens(Long userId) {
-        Set<String> keys = redisTemplate.keys("refresh:" + userId + ":*");
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
-        }
+        redisTemplate.execute((RedisCallback<Void>) connection -> {
+            Cursor<byte[]> cursor = connection.scan(ScanOptions.scanOptions()
+                    .match("refresh:" + userId + ":*")
+                    .count(100).build());
+            while (cursor.hasNext()) {
+                connection.del(cursor.next());
+            }
+            return null;
+        });
     }
 }

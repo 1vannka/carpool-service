@@ -7,6 +7,7 @@ import com.carpool.domain.service.AuthService;
 import com.carpool.infrastructure.security.JwtService;
 import com.carpool.infrastructure.security.RedisTokenService;
 import com.carpool.infrastructure.security.UserDetailsImpl;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -39,16 +40,15 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Регистрация доступна только для сотрудников компании");
         }
 
-        if (userRepositoryPort.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Пользователь с таким email уже существует");
-        }
-
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
         user.setRole("ROLE_USER");
 
-        User savedUser = userRepositoryPort.save(user);
-
-        return generateTokenPair(savedUser);
+        try {
+            User savedUser = userRepositoryPort.save(user);
+            return generateTokenPair(savedUser);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("Пользователь с таким email уже существует");
+        }
     }
 
     @Override
@@ -87,6 +87,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logoutAll(Long userId) {
         redisTokenService.deleteAllUserTokens(userId);
+    }
+
+    @Override
+    public Long getUserIdByEmail(String email) {
+        return userRepositoryPort.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"))
+                .getId();
     }
 
     private TokenPair generateTokenPair(User user) {
