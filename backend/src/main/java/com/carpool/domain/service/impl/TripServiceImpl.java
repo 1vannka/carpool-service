@@ -56,6 +56,7 @@ public class TripServiceImpl implements TripService {
                 savedTrip.getOfficeId(),
                 savedTrip.getRoutePath(),
                 savedTrip.getDepartureTime(),
+                savedTrip.getEstimatedDuration(),
                 searchRadiusMeters
         );
 
@@ -104,7 +105,7 @@ public class TripServiceImpl implements TripService {
         for (TripPassenger passenger : passengers) {
             notificationService.sendNotification(
                     passenger.getPassengerId(),
-                    "Внимание! Водитель отменил поездку."
+                    "Водитель отменил поездку"
             );
         }
 

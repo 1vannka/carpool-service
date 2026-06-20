@@ -40,6 +40,6 @@ public interface JpaTripRepository extends JpaRepository<TripEntity, Long> {
     int updateStartedTrips(@Param("now") OffsetDateTime now);
 
     @Modifying
-    @Query("UPDATE TripEntity t SET t.status = 'COMPLETED' WHERE t.status = 'IN_PROGRESS' AND t.departureTime <= :yesterday")
-    int updateCompletedTrips(@Param("yesterday") OffsetDateTime yesterday);
+    @Query(value = "UPDATE trips SET status = 'COMPLETED' WHERE status = 'IN_PROGRESS' AND departure_time + ((estimated_duration + 60) * interval '1 minute') <= :now", nativeQuery = true)
+    int updateCompletedTrips(@Param("now") OffsetDateTime now);
 }

@@ -46,8 +46,9 @@ public class RideRequestRepositoryAdapter implements RideRequestRepositoryPort {
     public List<RideRequest> findMatchingRequestsForTrip(Long officeId,
                                                          LineString routePath,
                                                          OffsetDateTime tripTime,
+                                                         Integer estimatedDuration,
                                                          double radiusMeters) {
-        return jpaRepository.findMatchingRequestsForTrip(officeId, routePath, tripTime, radiusMeters)
+        return jpaRepository.findMatchingRequestsForTrip(officeId, routePath, tripTime, estimatedDuration, radiusMeters)
                 .stream()
                 .map(mapper::toDomain)
                 .collect(Collectors.toList());

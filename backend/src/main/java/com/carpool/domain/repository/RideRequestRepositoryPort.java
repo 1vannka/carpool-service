@@ -14,6 +14,7 @@ public interface RideRequestRepositoryPort {
             Long officeId,
             LineString routePath,
             OffsetDateTime tripTime,
+            Integer estimatedDuration,
             double radiusMeters
     );
 }
