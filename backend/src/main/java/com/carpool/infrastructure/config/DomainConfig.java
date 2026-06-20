@@ -5,11 +5,13 @@ import com.carpool.domain.service.*;
 import com.carpool.domain.service.impl.*;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.transaction.annotation.Transactional;
 
 @Configuration
 public class DomainConfig {
 
     @Bean
+    @Transactional
     public TripService tripService(TripRepositoryPort tripRepositoryPort,
                                    RideRequestRepositoryPort rideRequestRepositoryPort,
                                    TripPassengerRepositoryPort tripPassengerRepositoryPort,
@@ -28,11 +30,13 @@ public class DomainConfig {
     }
 
     @Bean
+    @Transactional
     public RideRequestService rideRequestService(RideRequestRepositoryPort rideRequestRepositoryPort, TripRepositoryPort tripRepositoryPort) {
         return new RideRequestServiceImpl(rideRequestRepositoryPort, tripRepositoryPort);
     }
 
     @Bean
+    @Transactional
     public TripPassengerService tripPassengerService(TripPassengerRepositoryPort tripPassengerRepositoryPort,
                                                      TripRepositoryPort tripRepositoryPort,
                                                      RideRequestRepositoryPort rideRequestRepositoryPort,

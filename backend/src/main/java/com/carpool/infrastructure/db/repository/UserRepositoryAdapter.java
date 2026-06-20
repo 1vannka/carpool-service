@@ -6,6 +6,7 @@ import com.carpool.infrastructure.db.entity.UserEntity;
 import com.carpool.infrastructure.db.common.Mapper;
 import com.carpool.infrastructure.db.repository.jpa.JpaUserRepository;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -40,5 +41,11 @@ public class UserRepositoryAdapter implements UserRepositoryPort {
     @Override
     public Optional<User> findById(Long id) {
         return jpaUserRepository.findById(id).map(userMapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public void updateSocialAliases(Long id, String telegramAlias, String vkAlias) {
+        jpaUserRepository.updateSocialAliases(id, telegramAlias, vkAlias);
     }
 }

@@ -20,12 +20,18 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User updateSocialAliases(Long userId, String telegramAlias, String vkAlias) {
-        User user = getUserProfile(userId);
+        String tg = parseTelegram(telegramAlias);
+        String vk = parseVk(vkAlias);
 
-        user.setTelegramAlias(parseTelegram(telegramAlias));
-        user.setVkAlias(parseVk(vkAlias));
+        userRepositoryPort.updateSocialAliases(userId, tg, vk);
 
-        return userRepositoryPort.save(user);
+        return getUserProfile(userId);
+    }
+
+    @Override
+    public User getUserProfileByEmail(String email) {
+        return userRepositoryPort.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
     }
 
     private String parseTelegram(String alias) {
@@ -38,7 +44,7 @@ public class UserServiceImpl implements UserService {
         if (cleanAlias.startsWith("@")) {
             cleanAlias = cleanAlias.substring(1);
         }
-        return cleanAlias;
+        return cleanAlias.isBlank() ? null : cleanAlias;
     }
 
     private String parseVk(String alias) {
@@ -51,6 +57,6 @@ public class UserServiceImpl implements UserService {
         if (cleanAlias.startsWith("@")) {
             cleanAlias = cleanAlias.substring(1);
         }
-        return cleanAlias;
+        return cleanAlias.isBlank() ? null : cleanAlias;
     }
 }

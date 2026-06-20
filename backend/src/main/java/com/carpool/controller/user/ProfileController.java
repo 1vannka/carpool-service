@@ -5,8 +5,10 @@ import com.carpool.controller.dto.user.UserProfileResponse;
 import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.UserService;
 import com.carpool.infrastructure.security.UserDetailsImpl;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -22,18 +24,20 @@ public class ProfileController {
     }
 
     @GetMapping
-    public ResponseEntity<UserProfileResponse> getProfile(@AuthenticationPrincipal UserDetailsImpl userDetails) {
-        User user = userService.getUserProfile(userDetails.getUser().getId());
+    public ResponseEntity<UserProfileResponse> getProfile(@AuthenticationPrincipal UserDetails userDetails) {
+        User user = userService.getUserProfileByEmail(userDetails.getUsername());
         return ResponseEntity.ok(userWebMapper.toDto(user));
     }
 
     @PutMapping
     public ResponseEntity<UserProfileResponse> updateProfile(
-            @RequestBody UpdateProfileRequest request,
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+            @Valid @RequestBody UpdateProfileRequest request,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long userId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
 
         User updatedUser = userService.updateSocialAliases(
-                userDetails.getUser().getId(),
+                userId,
                 request.telegramAlias(),
                 request.vkAlias()
         );

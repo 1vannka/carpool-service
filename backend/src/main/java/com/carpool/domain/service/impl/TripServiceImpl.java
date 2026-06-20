@@ -71,20 +71,31 @@ public class TripServiceImpl implements TripService {
     }
 
     @Override
-    public Trip updateTrip(Long tripId, Trip updatedData) {
+    public Trip updateTrip(Long tripId, Long driverId, Trip updatedData) {
         validateDepartureTime(updatedData.getDepartureTime());
 
         Trip existingTrip = tripRepositoryPort.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
 
+        if (!existingTrip.getDriverId().equals(driverId)) {
+            throw new SecurityException("У вас нет прав на изменение этой поездки");
+        }
+
         if (existingTrip.getStatus() != TripStatus.CREATED) {
             throw new IllegalStateException("Нельзя редактировать поездку, которая уже началась или завершена");
         }
 
+        int bookedSeats = existingTrip.getTotalSeats() - existingTrip.getAvailableSeats();
+
+        if (updatedData.getTotalSeats() < bookedSeats) {
+            throw new IllegalArgumentException("Нельзя уменьшить количество мест: уже забронировано " + bookedSeats + " мест(а)");
+        }
+
+        existingTrip.setTotalSeats(updatedData.getTotalSeats());
+        existingTrip.setAvailableSeats(updatedData.getTotalSeats() - bookedSeats);
+
         existingTrip.setDepartureTime(updatedData.getDepartureTime());
         existingTrip.setEstimatedDuration(updatedData.getEstimatedDuration());
-        existingTrip.setTotalSeats(updatedData.getTotalSeats());
-        existingTrip.setAvailableSeats(updatedData.getTotalSeats());
         existingTrip.setCarModel(updatedData.getCarModel());
         existingTrip.setCarColor(updatedData.getCarColor());
         existingTrip.setCarPlate(updatedData.getCarPlate());
@@ -94,9 +105,13 @@ public class TripServiceImpl implements TripService {
     }
 
     @Override
-    public Trip cancelTrip(Long tripId) {
+    public Trip cancelTrip(Long tripId, Long driverId) {
         Trip existingTrip = tripRepositoryPort.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
+
+        if (!existingTrip.getDriverId().equals(driverId)) {
+            throw new SecurityException("У вас нет прав на отмену этой поездки");
+        }
 
         existingTrip.setStatus(TripStatus.CANCELED);
         Trip savedTrip = tripRepositoryPort.save(existingTrip);

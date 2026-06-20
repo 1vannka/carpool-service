@@ -53,4 +53,10 @@ public class GlobalExceptionHandler {
                         "details", errors
                 ));
     }
+
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<Object> handleSecurityException(SecurityException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", ex.getMessage()));
+    }
 }
