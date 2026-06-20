@@ -1,7 +1,6 @@
 package com.carpool.controller.dto.auth;
 
-public record AuthResponse(
-        String accessToken,
+public record RefreshRequest(
         String refreshToken
 ) {
 }

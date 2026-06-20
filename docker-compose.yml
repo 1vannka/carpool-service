@@ -11,5 +11,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+  redis:
+    image: redis:7.0-alpine
+    container_name: carpool_redis
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    restart: always
 volumes:
   pgdata:

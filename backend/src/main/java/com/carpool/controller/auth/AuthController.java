@@ -3,13 +3,14 @@ package com.carpool.controller.auth;
 import com.carpool.controller.dto.auth.AuthResponse;
 import com.carpool.controller.dto.auth.LoginRequest;
 import com.carpool.controller.dto.auth.RegisterRequest;
+import com.carpool.controller.dto.auth.RefreshRequest;
+import com.carpool.domain.model.auth.TokenPair;
 import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.AuthService;
+import com.carpool.infrastructure.security.UserDetailsImpl;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -26,15 +27,42 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
         User user = authWebMapper.toDomain(request);
-        String token = authService.register(user, request.password());
+        TokenPair tokenPair = authService.register(user, request.password());
 
-        return ResponseEntity.ok(new AuthResponse(token));
+        return ResponseEntity.ok(new AuthResponse(tokenPair.accessToken(), tokenPair.refreshToken()));
     }
 
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        String token = authService.login(request.email(), request.password());
+        TokenPair tokenPair = authService.login(request.email(), request.password());
 
-        return ResponseEntity.ok(new AuthResponse(token));
+        return ResponseEntity.ok(new AuthResponse(tokenPair.accessToken(), tokenPair.refreshToken()));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(@RequestBody RefreshRequest request) {
+        TokenPair tokenPair = authService.refreshTokens(request.refreshToken());
+
+        return ResponseEntity.ok(new AuthResponse(tokenPair.accessToken(), tokenPair.refreshToken()));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @AuthenticationPrincipal UserDetailsImpl userDetails,
+            @RequestBody RefreshRequest request) {
+
+        Long userId = userDetails.getUser().getId();
+        authService.logout(userId, request.refreshToken());
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(@AuthenticationPrincipal UserDetailsImpl userDetails) {
+
+        Long userId = userDetails.getUser().getId();
+        authService.logoutAll(userId);
+
+        return ResponseEntity.noContent().build();
     }
 }

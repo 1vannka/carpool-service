@@ -1,17 +1,16 @@
 package com.carpool.infrastructure.service;
 
+import com.carpool.domain.model.auth.TokenPair;
 import com.carpool.domain.model.user.User;
 import com.carpool.domain.repository.UserRepositoryPort;
 import com.carpool.domain.service.AuthService;
 import com.carpool.infrastructure.security.JwtService;
+import com.carpool.infrastructure.security.RedisTokenService;
 import com.carpool.infrastructure.security.UserDetailsImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 public class AuthServiceImpl implements AuthService {
@@ -20,19 +19,22 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final RedisTokenService redisTokenService;
 
     public AuthServiceImpl(UserRepositoryPort userRepositoryPort,
                            PasswordEncoder passwordEncoder,
                            JwtService jwtService,
-                           AuthenticationManager authenticationManager) {
+                           AuthenticationManager authenticationManager,
+                           RedisTokenService redisTokenService) {
         this.userRepositoryPort = userRepositoryPort;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.redisTokenService = redisTokenService;
     }
 
     @Override
-    public String register(User user, String rawPassword) {
+    public TokenPair register(User user, String rawPassword) {
         if (!user.getEmail().endsWith("@company.com")) {
             throw new IllegalArgumentException("Регистрация доступна только для сотрудников компании");
         }
@@ -46,14 +48,11 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepositoryPort.save(user);
 
-        UserDetailsImpl userDetails = new UserDetailsImpl(savedUser);
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", savedUser.getRole());
-        return jwtService.generateToken(extraClaims, userDetails);
+        return generateTokenPair(savedUser);
     }
 
     @Override
-    public String login(String email, String rawPassword) {
+    public TokenPair login(String email, String rawPassword) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, rawPassword)
         );
@@ -61,9 +60,47 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepositoryPort.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Пользователь не найден"));
 
+        return generateTokenPair(user);
+    }
+
+    @Override
+    public TokenPair refreshTokens(String refreshToken) {
+        String email = jwtService.extractUsername(refreshToken);
+
+        User user = userRepositoryPort.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Пользователь не найден"));
+
+        if (!redisTokenService.isRefreshTokenValid(user.getId(), refreshToken)) {
+            throw new IllegalArgumentException("Невалидный Refresh Token");
+        }
+
+        redisTokenService.deleteRefreshToken(user.getId(), refreshToken);
+
+        return generateTokenPair(user);
+    }
+
+    @Override
+    public void logout(Long userId, String refreshToken) {
+        redisTokenService.deleteRefreshToken(userId, refreshToken);
+    }
+
+    @Override
+    public void logoutAll(Long userId) {
+        redisTokenService.deleteAllUserTokens(userId);
+    }
+
+    private TokenPair generateTokenPair(User user) {
         UserDetailsImpl userDetails = new UserDetailsImpl(user);
-        Map<String, Object> extraClaims = new HashMap<>();
-        extraClaims.put("role", user.getRole());
-        return jwtService.generateToken(extraClaims, userDetails);
+
+        String accessToken = jwtService.generateAccessToken(userDetails, user.getId());
+        String refreshToken = jwtService.generateRefreshToken(userDetails);
+
+        redisTokenService.saveRefreshToken(
+                user.getId(),
+                refreshToken,
+                jwtService.getRefreshExpiration()
+        );
+
+        return new TokenPair(accessToken, refreshToken);
     }
 }
