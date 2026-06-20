@@ -4,6 +4,7 @@ import com.carpool.domain.model.trip.TripStatus;
 import com.carpool.infrastructure.db.entity.TripEntity;
 import org.locationtech.jts.geom.Point;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -33,4 +34,12 @@ public interface JpaTripRepository extends JpaRepository<TripEntity, Long> {
             @Param("pickupLocation") Point pickupLocation,
             @Param("radiusMeters") double radiusMeters
     );
+
+    @Modifying
+    @Query("UPDATE TripEntity t SET t.status = 'IN_PROGRESS' WHERE t.status = 'CREATED' AND t.departureTime <= :now")
+    int updateStartedTrips(@Param("now") OffsetDateTime now);
+
+    @Modifying
+    @Query("UPDATE TripEntity t SET t.status = 'COMPLETED' WHERE t.status = 'IN_PROGRESS' AND t.departureTime <= :yesterday")
+    int updateCompletedTrips(@Param("yesterday") OffsetDateTime yesterday);
 }

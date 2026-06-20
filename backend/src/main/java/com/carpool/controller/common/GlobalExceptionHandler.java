@@ -1,6 +1,7 @@
 package com.carpool.controller.common;
 
 import com.carpool.domain.exception.ActiveTripAlreadyExistsException;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -27,5 +28,11 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(Map.of("error", ex.getMessage()));
+    }
+
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    public ResponseEntity<Object> handleOptimisticLockingFailure(OptimisticLockingFailureException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "Кто-то другой успел занять это место"));
     }
 }

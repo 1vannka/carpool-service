@@ -7,7 +7,9 @@ import com.carpool.infrastructure.db.entity.TripPassengerId;
 import com.carpool.infrastructure.db.repository.jpa.JpaTripPassengerRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Repository
 public class TripPassengerRepositoryAdapter implements TripPassengerRepositoryPort {
@@ -47,5 +49,16 @@ public class TripPassengerRepositoryAdapter implements TripPassengerRepositoryPo
     public void delete(Long tripId, Long passengerId) {
         TripPassengerId id = new TripPassengerId(tripId, passengerId);
         jpaRepository.deleteById(id);
+    }
+
+    @Override
+    public List<TripPassenger> findAllByTripId(Long tripId) {
+        return jpaRepository.findByIdTripId(tripId).stream()
+                .map(entity -> new TripPassenger(
+                        entity.getId().getTripId(),
+                        entity.getId().getPassengerId(),
+                        entity.getStatus()
+                ))
+                .collect(Collectors.toList());
     }
 }

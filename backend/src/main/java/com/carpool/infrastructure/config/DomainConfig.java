@@ -10,8 +10,11 @@ import org.springframework.context.annotation.Configuration;
 public class DomainConfig {
 
     @Bean
-    public TripService tripService(TripRepositoryPort tripRepositoryPort, RideRequestRepositoryPort rideRequestRepositoryPort) {
-        return new TripServiceImpl(tripRepositoryPort, rideRequestRepositoryPort);
+    public TripService tripService(TripRepositoryPort tripRepositoryPort,
+                                   RideRequestRepositoryPort rideRequestRepositoryPort,
+                                   TripPassengerRepositoryPort tripPassengerRepositoryPort,
+                                   NotificationService notificationService) {
+        return new TripServiceImpl(tripRepositoryPort, rideRequestRepositoryPort, tripPassengerRepositoryPort, notificationService);
     }
 
     @Bean
@@ -30,10 +33,10 @@ public class DomainConfig {
     }
 
     @Bean
-    public TripPassengerService tripPassengerService(
-            TripPassengerRepositoryPort tripPassengerRepositoryPort,
-            TripRepositoryPort tripRepositoryPort,
-            RideRequestRepositoryPort rideRequestRepositoryPort) {
-        return new TripPassengerServiceImpl(tripPassengerRepositoryPort, tripRepositoryPort, rideRequestRepositoryPort);
+    public TripPassengerService tripPassengerService(TripPassengerRepositoryPort tripPassengerRepositoryPort,
+                                                     TripRepositoryPort tripRepositoryPort,
+                                                     RideRequestRepositoryPort rideRequestRepositoryPort,
+                                                     NotificationService notificationService) {
+        return new TripPassengerServiceImpl(tripPassengerRepositoryPort, tripRepositoryPort, rideRequestRepositoryPort, notificationService);
     }
 }

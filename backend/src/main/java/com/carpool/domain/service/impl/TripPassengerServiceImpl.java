@@ -8,6 +8,7 @@ import com.carpool.domain.model.trip.TripStatus;
 import com.carpool.domain.repository.RideRequestRepositoryPort;
 import com.carpool.domain.repository.TripPassengerRepositoryPort;
 import com.carpool.domain.repository.TripRepositoryPort;
+import com.carpool.domain.service.NotificationService;
 import com.carpool.domain.service.TripPassengerService;
 
 public class TripPassengerServiceImpl implements TripPassengerService {
@@ -15,12 +16,14 @@ public class TripPassengerServiceImpl implements TripPassengerService {
     private final TripPassengerRepositoryPort tripPassengerRepositoryPort;
     private final TripRepositoryPort tripRepositoryPort;
     private final RideRequestRepositoryPort rideRequestRepositoryPort;
+    private final NotificationService notificationService;
 
     public TripPassengerServiceImpl(TripPassengerRepositoryPort tripPassengerRepositoryPort, TripRepositoryPort tripRepositoryPort,
-                                    RideRequestRepositoryPort rideRequestRepositoryPort) {
+                                    RideRequestRepositoryPort rideRequestRepositoryPort, NotificationService notificationService) {
         this.tripPassengerRepositoryPort = tripPassengerRepositoryPort;
         this.tripRepositoryPort = tripRepositoryPort;
         this.rideRequestRepositoryPort = rideRequestRepositoryPort;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -44,7 +47,14 @@ public class TripPassengerServiceImpl implements TripPassengerService {
                 .orElseThrow(() -> new IllegalStateException("Сначала создайте заявку с точкой посадки"));
 
         TripPassenger request = new TripPassenger(tripId, passengerId, BookingStatus.WAITING_APPROVAL);
-        return tripPassengerRepositoryPort.save(request);
+        TripPassenger savedRequest = tripPassengerRepositoryPort.save(request);
+
+        notificationService.sendNotification(
+                trip.getDriverId(),
+                "У вас новая заявка на присоединение к поездке!"
+        );
+
+        return savedRequest;
     }
 
     @Override
@@ -68,6 +78,11 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         trip.setAvailableSeats(trip.getAvailableSeats() - 1);
         tripRepositoryPort.save(trip);
 
+        notificationService.sendNotification(
+                passengerId,
+                "Водитель одобрил вашу заявку на поездку"
+        );
+
         return savedRequest;
     }
 
@@ -77,6 +92,38 @@ public class TripPassengerServiceImpl implements TripPassengerService {
 
         TripPassenger request = tripPassengerRepositoryPort.findByIds(tripId, passengerId)
                 .orElseThrow(() -> new IllegalArgumentException("Заявка пассажира не найдена"));
+
+        tripPassengerRepositoryPort.delete(tripId, passengerId);
+
+        notificationService.sendNotification(
+                passengerId,
+                "Водитель отклонил вашу заявку"
+        );
+    }
+
+    @Override
+    public void cancelPassengerRequest(Long tripId, Long passengerId) {
+        TripPassenger request = tripPassengerRepositoryPort.findByIds(tripId, passengerId)
+                .orElseThrow(() -> new IllegalArgumentException("Заявка пассажира не найдена"));
+
+        Trip trip = tripRepositoryPort.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
+
+        if (request.getStatus() == BookingStatus.CONFIRMED) {
+            trip.setAvailableSeats(trip.getAvailableSeats() + 1);
+            tripRepositoryPort.save(trip);
+
+            notificationService.sendNotification(
+                    trip.getDriverId(),
+                    "Пассажир отменил поездку. У вас освободилось 1 место"
+            );
+        }
+        else if (request.getStatus() == BookingStatus.WAITING_APPROVAL) {
+            notificationService.sendNotification(
+                    trip.getDriverId(),
+                    "Пассажир отменил свою заявку"
+            );
+        }
 
         tripPassengerRepositoryPort.delete(tripId, passengerId);
     }

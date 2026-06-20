@@ -55,4 +55,15 @@ public class TripPassengerController {
 
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{tripId}/passengers/my-request")
+    public ResponseEntity<Void> cancelMyRequest(
+            @PathVariable Long tripId,
+            @AuthenticationPrincipal UserDetailsImpl userDetails) {
+
+        Long passengerId = userDetails.getUser().getId();
+        tripPassengerService.cancelPassengerRequest(tripId, passengerId);
+
+        return ResponseEntity.noContent().build();
+    }
 }

@@ -1,10 +1,14 @@
 package com.carpool.domain.service.impl;
 
 import com.carpool.domain.exception.ActiveTripAlreadyExistsException;
+import com.carpool.domain.model.ride.RideRequest;
 import com.carpool.domain.model.trip.Trip;
+import com.carpool.domain.model.trip.TripPassenger;
 import com.carpool.domain.model.trip.TripStatus;
 import com.carpool.domain.repository.RideRequestRepositoryPort;
+import com.carpool.domain.repository.TripPassengerRepositoryPort;
 import com.carpool.domain.repository.TripRepositoryPort;
+import com.carpool.domain.service.NotificationService;
 import com.carpool.domain.service.TripService;
 
 import java.time.OffsetDateTime;
@@ -15,10 +19,17 @@ public class TripServiceImpl implements TripService {
 
     private final TripRepositoryPort tripRepositoryPort;
     private final RideRequestRepositoryPort rideRequestRepositoryPort;
+    private final TripPassengerRepositoryPort tripPassengerRepositoryPort;
+    private final NotificationService notificationService;
 
-    public TripServiceImpl(TripRepositoryPort tripRepositoryPort, RideRequestRepositoryPort rideRequestRepositoryPort) {
+    public TripServiceImpl(TripRepositoryPort tripRepositoryPort,
+                           RideRequestRepositoryPort rideRequestRepositoryPort,
+                           TripPassengerRepositoryPort tripPassengerRepositoryPort,
+                           NotificationService notificationService) {
         this.tripRepositoryPort = tripRepositoryPort;
         this.rideRequestRepositoryPort = rideRequestRepositoryPort;
+        this.tripPassengerRepositoryPort = tripPassengerRepositoryPort;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -37,7 +48,25 @@ public class TripServiceImpl implements TripService {
         trip.setStatus(TripStatus.CREATED);
         trip.setAvailableSeats(trip.getTotalSeats());
 
-        return tripRepositoryPort.save(trip);
+        Trip savedTrip = tripRepositoryPort.save(trip);
+
+        double searchRadiusMeters = 1500.0;
+
+        List<RideRequest> matchingRequests = rideRequestRepositoryPort.findMatchingRequestsForTrip(
+                savedTrip.getOfficeId(),
+                savedTrip.getRoutePath(),
+                savedTrip.getDepartureTime(),
+                searchRadiusMeters
+        );
+
+        for (RideRequest request : matchingRequests) {
+            notificationService.sendNotification(
+                    request.getPassengerId(),
+                    "Найден водитель по вашему маршруту"
+            );
+        }
+
+        return savedTrip;
     }
 
     @Override
@@ -69,7 +98,17 @@ public class TripServiceImpl implements TripService {
                 .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
 
         existingTrip.setStatus(TripStatus.CANCELED);
-        return tripRepositoryPort.save(existingTrip);
+        Trip savedTrip = tripRepositoryPort.save(existingTrip);
+
+        List<TripPassenger> passengers = tripPassengerRepositoryPort.findAllByTripId(tripId);
+        for (TripPassenger passenger : passengers) {
+            notificationService.sendNotification(
+                    passenger.getPassengerId(),
+                    "Внимание! Водитель отменил поездку."
+            );
+        }
+
+        return savedTrip;
     }
 
     @Override
