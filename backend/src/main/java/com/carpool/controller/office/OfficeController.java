@@ -6,6 +6,8 @@ import com.carpool.controller.dto.office.OfficeUpdateRequest;
 import com.carpool.domain.model.office.Office;
 import com.carpool.domain.service.OfficeService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,7 +37,8 @@ public class OfficeController {
     @Operation(summary = "Получить список офисов", description = "С возможностью фильтрации по названию города")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Список получен"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
     public ResponseEntity<List<OfficeResponse>> getOffices(
             @RequestParam(required = false) String city) {
@@ -52,9 +55,12 @@ public class OfficeController {
     @Operation(summary = "Добавить офис", description = "Только для роли ADMIN")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Офис создан"),
-            @ApiResponse(responseCode = "400", description = "Невалидные данные"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Недостаточно прав\"}")))
     })
     public ResponseEntity<OfficeResponse> createOffice(@Valid @RequestBody OfficeCreateRequest request) {
         Office officeToCreate = officeWebMapper.toDomain(request);
@@ -67,10 +73,14 @@ public class OfficeController {
     @Operation(summary = "Обновить офис", description = "Только для роли ADMIN")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Офис обновлен"),
-            @ApiResponse(responseCode = "400", description = "Невалидные данные"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)"),
-            @ApiResponse(responseCode = "404", description = "Офис не найден")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Недостаточно прав\"}"))),
+            @ApiResponse(responseCode = "404", description = "Офис не найден",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Офис не найден\"}")))
     })
     public ResponseEntity<OfficeResponse> updateOffice(
             @PathVariable Long id,
@@ -84,10 +94,13 @@ public class OfficeController {
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Удалить офис", description = "Только для роли ADMIN")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Офис удален"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)"),
-            @ApiResponse(responseCode = "404", description = "Офис не найден (если выброшено исключение в сервисе)")
+            @ApiResponse(responseCode = "204", description = "Офис удален", content = @Content(schema = @Schema(hidden = true))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Недостаточно прав (не админ)",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Недостаточно прав\"}"))),
+            @ApiResponse(responseCode = "404", description = "Офис не найден",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Офис не найден\"}")))
     })
     public ResponseEntity<Void> deleteOffice(@PathVariable Long id) {
         officeService.deleteOffice(id);

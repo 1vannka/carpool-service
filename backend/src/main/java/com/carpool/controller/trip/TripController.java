@@ -7,6 +7,8 @@ import com.carpool.domain.model.trip.Trip;
 import com.carpool.domain.service.TripService;
 import com.carpool.domain.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,9 +41,12 @@ public class TripController {
     @Operation(summary = "Создать поездку", description = "Создает новую поездку. Водитель не должен иметь активной заявки пассажира.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Поездка успешно создана"),
-            @ApiResponse(responseCode = "400", description = "Некорректные данные маршрута или времени"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "409", description = "У вас уже есть активная поездка или заявка пассажира")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "409", description = "Уже есть активная заявка или поездка",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Уже есть активная поездка\"}")))
     })
     public ResponseEntity<TripResponse> createTrip(
             @Valid @RequestBody TripCreateRequest request,
@@ -60,8 +65,10 @@ public class TripController {
     @Operation(summary = "Получить мою активную поездку", description = "Возвращает текущую поездку в статусе CREATED или IN_PROGRESS")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Поездка найдена"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "404", description = "Активных поездок нет")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "404", description = "Активных поездок нет",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Поездка не найдена\"}")))
     })
     public ResponseEntity<TripResponse> getActiveTrip(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
@@ -76,10 +83,14 @@ public class TripController {
     @Operation(summary = "Обновить поездку", description = "Редактирование маршрута/мест. Доступно только водителю (создателю) до старта.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Поездка обновлена"),
-            @ApiResponse(responseCode = "400", description = "Нельзя уменьшить места ниже забронированных или поездка уже началась"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Нет прав на изменение чужой поездки (IDOR)"),
-            @ApiResponse(responseCode = "404", description = "Поездка не найдена")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "400", description = "Нет прав на изменение чужой поездки",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Попытка изменить чужую поездку\"}"))),
+            @ApiResponse(responseCode = "404", description = "Активных поездок нет",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Поездка не найдена\"}")))
     })
     public ResponseEntity<TripResponse> updateTrip(
             @PathVariable Long id,
@@ -98,9 +109,12 @@ public class TripController {
     @Operation(summary = "Отменить поездку", description = "Переводит поездку в статус CANCELED и рассылает уведомления пассажирам")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Поездка отменена"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Попытка отменить чужую поездку"),
-            @ApiResponse(responseCode = "404", description = "Поездка не найдена")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Попытка отменить чужую поездку",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Попытка отменить чужую поездку\"}"))),
+            @ApiResponse(responseCode = "404", description = "Поездка не найдена",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Поездка не найдена\"}")))
     })
     public ResponseEntity<TripResponse> cancelTrip(
             @PathVariable Long id,
@@ -116,8 +130,10 @@ public class TripController {
     @Operation(summary = "Умный поиск поездок (Matching)", description = "Ищет поездки (в радиусе 1.5км) на основе активной заявки пассажира")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Список подходящих поездок"),
-            @ApiResponse(responseCode = "400", description = "Нет активной заявки пассажира с точкой посадки"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован")
+            @ApiResponse(responseCode = "400", description = "Нет активной заявки пассажира с точкой посадки",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Нет активной заявки\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
     public ResponseEntity<List<TripResponse>> getMatchingTrips(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -133,10 +149,11 @@ public class TripController {
     }
 
     @GetMapping
-    @Operation(summary = "Ручной поиск поездок", description = "Фолбек-сценарий. Возвращает все активные поездки в выбранный офис")
+    @Operation(summary = "Ручной поиск поездок", description = "Возвращает все активные поездки в выбранный офис")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Список поездок"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
     public ResponseEntity<List<TripResponse>> getAvailableTrips(
             @RequestParam Long officeId) {

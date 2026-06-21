@@ -6,6 +6,8 @@ import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.UserService;
 import com.carpool.infrastructure.security.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,9 +34,12 @@ public class ProfileController {
     @Operation(summary = "Получить профиль", description = "Возвращает данные текущего авторизованного пользователя")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Профиль получен"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Нет прав для доступа к профилю"),
-            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Нет прав для доступа к профилю",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Нет прав для доступа к профилю\"}"))),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Пользователь не найдена\"}")))
     })
     public ResponseEntity<UserProfileResponse> getProfile(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserProfileByEmail(userDetails.getUsername());
@@ -45,8 +50,10 @@ public class ProfileController {
     @Operation(summary = "Обновить профиль", description = "Обновляет ссылки на социальные сети")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Профиль успешно обновлен"),
-            @ApiResponse(responseCode = "400", description = "Ошибка валидации данных"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
     public ResponseEntity<UserProfileResponse> updateProfile(
             @Valid @RequestBody UpdateProfileRequest request,

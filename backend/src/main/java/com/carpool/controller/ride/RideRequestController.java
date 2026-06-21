@@ -6,6 +6,8 @@ import com.carpool.domain.model.ride.RideRequest;
 import com.carpool.domain.service.RideRequestService;
 import com.carpool.domain.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,9 +37,12 @@ public class RideRequestController {
     @Operation(summary = "Создать заявку", description = "Точка посадки и желаемое время. Отменяет статус водителя.")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Заявка создана"),
-            @ApiResponse(responseCode = "400", description = "Время в прошлом или плохие координаты"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "409", description = "Уже есть активная заявка или поездка")
+            @ApiResponse(responseCode = "400", description = "Невалидные данные",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Ошибка валидации данных\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "409", description = "Уже есть активная заявка или поездка",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Уже есть активная заявка или поездка\"}")))
     })
     public ResponseEntity<RideRequestResponse> createRideRequest(
             @Valid @RequestBody RideRequestCreateRequest request,
@@ -56,8 +61,10 @@ public class RideRequestController {
     @Operation(summary = "Получить активную заявку", description = "Возвращает текущую заявку пассажира (статус PENDING)")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Заявка найдена"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "404", description = "Активных заявок нет")
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "404", description = "Активных заявок нет",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка не найдена\"}")))
     })
     public ResponseEntity<RideRequestResponse> getMyActiveRequest(
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -73,11 +80,15 @@ public class RideRequestController {
     @DeleteMapping("/{id}")
     @Operation(summary = "Отменить заявку", description = "Переводит заявку в статус CANCELED. Доступно только владельцу.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Заявка отменена"),
-            @ApiResponse(responseCode = "400", description = "Заявка уже отменена или протухла"),
-            @ApiResponse(responseCode = "401", description = "Не авторизован"),
-            @ApiResponse(responseCode = "403", description = "Попытка удалить чужую заявку"),
-            @ApiResponse(responseCode = "404", description = "Заявка не найдена")
+            @ApiResponse(responseCode = "204", description = "Заявка отменена",content = @Content(schema = @Schema(hidden = true))),
+            @ApiResponse(responseCode = "400", description = "Заявка уже отменена или истекла",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка уже отменена или истекла\"}"))),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Попытка удалить чужую заявку",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Попытка удалить чужую заявку\"}"))),
+            @ApiResponse(responseCode = "404", description = "Заявка не найдена",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка не найдена\"}")))
     })
     public ResponseEntity<Void> cancelRideRequest(
             @PathVariable Long id,

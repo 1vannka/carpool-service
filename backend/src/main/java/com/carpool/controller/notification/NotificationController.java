@@ -3,6 +3,8 @@ package com.carpool.controller.notification;
 import com.carpool.domain.service.UserService;
 import com.carpool.infrastructure.service.SseSubscriptionManager;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,7 +33,8 @@ public class NotificationController {
     @Operation(summary = "Подключиться к потоку уведомлений", description = "Открывает долгоживущее SSE соединение. Клиент должен слушать события 'INIT', 'NOTIFICATION' и 'PING'")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Подключение установлено (текстовый поток text/event-stream)"),
-            @ApiResponse(responseCode = "401", description = "Отсутствует или невалиден JWT-токен")
+            @ApiResponse(responseCode = "401", description = "Отсутствует или невалиден JWT-токен",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
     public SseEmitter subscribe(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
