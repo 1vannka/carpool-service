@@ -5,6 +5,10 @@ import com.carpool.controller.dto.user.UserProfileResponse;
 import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.UserService;
 import com.carpool.infrastructure.security.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -13,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/profile")
+@Tag(name = "Profile", description = "Управление профилем пользователя")
 public class ProfileController {
 
     private final UserService userService;
@@ -24,12 +29,25 @@ public class ProfileController {
     }
 
     @GetMapping
+    @Operation(summary = "Получить профиль", description = "Возвращает данные текущего авторизованного пользователя")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Профиль получен"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(responseCode = "403", description = "Нет прав для доступа к профилю"),
+            @ApiResponse(responseCode = "404", description = "Пользователь не найден")
+    })
     public ResponseEntity<UserProfileResponse> getProfile(@AuthenticationPrincipal UserDetails userDetails) {
         User user = userService.getUserProfileByEmail(userDetails.getUsername());
         return ResponseEntity.ok(userWebMapper.toDto(user));
     }
 
     @PutMapping
+    @Operation(summary = "Обновить профиль", description = "Обновляет ссылки на социальные сети")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Профиль успешно обновлен"),
+            @ApiResponse(responseCode = "400", description = "Ошибка валидации данных"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован")
+    })
     public ResponseEntity<UserProfileResponse> updateProfile(
             @Valid @RequestBody UpdateProfileRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {

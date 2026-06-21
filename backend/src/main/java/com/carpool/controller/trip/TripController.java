@@ -6,6 +6,10 @@ import com.carpool.controller.dto.trip.TripUpdateRequest;
 import com.carpool.domain.model.trip.Trip;
 import com.carpool.domain.service.TripService;
 import com.carpool.domain.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +22,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/trips")
+@Tag(name = "Trips", description = "Управление поездками (для водителей и поиска для пассажиров)")
 public class TripController {
 
     private final TripService tripService;
@@ -31,6 +36,13 @@ public class TripController {
     }
 
     @PostMapping
+    @Operation(summary = "Создать поездку", description = "Создает новую поездку. Водитель не должен иметь активной заявки пассажира.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Поездка успешно создана"),
+            @ApiResponse(responseCode = "400", description = "Некорректные данные маршрута или времени"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(responseCode = "409", description = "У вас уже есть активная поездка или заявка пассажира")
+    })
     public ResponseEntity<TripResponse> createTrip(
             @Valid @RequestBody TripCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -45,6 +57,12 @@ public class TripController {
     }
 
     @GetMapping("/my-active")
+    @Operation(summary = "Получить мою активную поездку", description = "Возвращает текущую поездку в статусе CREATED или IN_PROGRESS")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Поездка найдена"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(responseCode = "404", description = "Активных поездок нет")
+    })
     public ResponseEntity<TripResponse> getActiveTrip(@AuthenticationPrincipal UserDetails userDetails) {
         Long userId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
 
@@ -55,6 +73,14 @@ public class TripController {
     }
 
     @PutMapping("/{id}")
+    @Operation(summary = "Обновить поездку", description = "Редактирование маршрута/мест. Доступно только водителю (создателю) до старта.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Поездка обновлена"),
+            @ApiResponse(responseCode = "400", description = "Нельзя уменьшить места ниже забронированных или поездка уже началась"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(responseCode = "403", description = "Нет прав на изменение чужой поездки (IDOR)"),
+            @ApiResponse(responseCode = "404", description = "Поездка не найдена")
+    })
     public ResponseEntity<TripResponse> updateTrip(
             @PathVariable Long id,
             @Valid @RequestBody TripUpdateRequest request,
@@ -69,6 +95,13 @@ public class TripController {
     }
 
     @DeleteMapping("/{id}")
+    @Operation(summary = "Отменить поездку", description = "Переводит поездку в статус CANCELED и рассылает уведомления пассажирам")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Поездка отменена"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован"),
+            @ApiResponse(responseCode = "403", description = "Попытка отменить чужую поездку"),
+            @ApiResponse(responseCode = "404", description = "Поездка не найдена")
+    })
     public ResponseEntity<TripResponse> cancelTrip(
             @PathVariable Long id,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -80,6 +113,12 @@ public class TripController {
     }
 
     @GetMapping("/matching")
+    @Operation(summary = "Умный поиск поездок (Matching)", description = "Ищет поездки (в радиусе 1.5км) на основе активной заявки пассажира")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Список подходящих поездок"),
+            @ApiResponse(responseCode = "400", description = "Нет активной заявки пассажира с точкой посадки"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован")
+    })
     public ResponseEntity<List<TripResponse>> getMatchingTrips(
             @AuthenticationPrincipal UserDetails userDetails) {
 
@@ -94,6 +133,11 @@ public class TripController {
     }
 
     @GetMapping
+    @Operation(summary = "Ручной поиск поездок", description = "Фолбек-сценарий. Возвращает все активные поездки в выбранный офис")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Список поездок"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован")
+    })
     public ResponseEntity<List<TripResponse>> getAvailableTrips(
             @RequestParam Long officeId) {
 
