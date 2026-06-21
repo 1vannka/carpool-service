@@ -1,38 +1,31 @@
-package com.carpool.infrastructure.db.entity;
+package com.carpool.domain.model.ride;
 
-import com.carpool.domain.model.ride.RideRequestStatus;
-import jakarta.persistence.*;
 import org.locationtech.jts.geom.Point;
 import java.time.OffsetDateTime;
+import java.util.Objects;
 
-@Entity
-@Table(name = "ride_requests")
-public class RideRequestEntity {
+public class RideRequest {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
-    @Column(name = "passenger_id", nullable = false)
     private Long passengerId;
-
-    @Column(name = "office_id", nullable = false)
     private Long officeId;
-
-    @Column(name = "pickup_location", nullable = false, columnDefinition = "geometry(Point,4326)")
     private Point pickupLocation;
-
-    @Column(name = "target_time", nullable = false)
     private OffsetDateTime targetTime;
-
-    @Column(name = "tolerance_time", nullable = false)
     private Integer toleranceTime;
-
-    @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
     private RideRequestStatus status;
 
-    public RideRequestEntity() {}
+    public RideRequest() {
+    }
+
+    public RideRequest(Long id, Long passengerId, Long officeId, Point pickupLocation, OffsetDateTime targetTime, Integer toleranceTime, RideRequestStatus status) {
+        this.id = id;
+        this.passengerId = passengerId;
+        this.officeId = officeId;
+        this.pickupLocation = pickupLocation;
+        this.targetTime = targetTime;
+        this.toleranceTime = toleranceTime;
+        this.status = status;
+    }
 
     public Long getId() {
         return id;
@@ -88,5 +81,24 @@ public class RideRequestEntity {
 
     public void setStatus(RideRequestStatus status) {
         this.status = status;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        RideRequest that = (RideRequest) o;
+        return Objects.equals(id, that.id) &&
+                Objects.equals(passengerId, that.passengerId) &&
+                Objects.equals(officeId, that.officeId) &&
+                Objects.equals(pickupLocation, that.pickupLocation) &&
+                Objects.equals(targetTime, that.targetTime) &&
+                Objects.equals(toleranceTime, that.toleranceTime) &&
+                status == that.status;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, passengerId, officeId, pickupLocation, targetTime, toleranceTime, status);
     }
 }

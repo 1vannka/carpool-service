@@ -1,0 +1,48 @@
+package com.carpool.infrastructure.config;
+
+import com.carpool.domain.repository.*;
+import com.carpool.domain.service.*;
+import com.carpool.domain.service.impl.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableAsync;
+import org.springframework.transaction.annotation.Transactional;
+
+@Configuration
+@EnableAsync
+public class DomainConfig {
+
+    @Bean
+    @Transactional
+    public TripService tripService(TripRepositoryPort tripRepositoryPort,
+                                   RideRequestRepositoryPort rideRequestRepositoryPort,
+                                   TripPassengerRepositoryPort tripPassengerRepositoryPort,
+                                   NotificationService notificationService) {
+        return new TripServiceImpl(tripRepositoryPort, rideRequestRepositoryPort, tripPassengerRepositoryPort, notificationService);
+    }
+
+    @Bean
+    public OfficeService officeService(OfficeRepositoryPort officeRepositoryPort) {
+        return new OfficeServiceImpl(officeRepositoryPort);
+    }
+
+    @Bean
+    public UserService userService(UserRepositoryPort userRepositoryPort) {
+        return new UserServiceImpl(userRepositoryPort);
+    }
+
+    @Bean
+    @Transactional
+    public RideRequestService rideRequestService(RideRequestRepositoryPort rideRequestRepositoryPort, TripRepositoryPort tripRepositoryPort) {
+        return new RideRequestServiceImpl(rideRequestRepositoryPort, tripRepositoryPort);
+    }
+
+    @Bean
+    @Transactional
+    public TripPassengerService tripPassengerService(TripPassengerRepositoryPort tripPassengerRepositoryPort,
+                                                     TripRepositoryPort tripRepositoryPort,
+                                                     RideRequestRepositoryPort rideRequestRepositoryPort,
+                                                     NotificationService notificationService) {
+        return new TripPassengerServiceImpl(tripPassengerRepositoryPort, tripRepositoryPort, rideRequestRepositoryPort, notificationService);
+    }
+}
