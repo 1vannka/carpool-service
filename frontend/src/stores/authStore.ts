@@ -67,15 +67,19 @@ export const useAuthStore = defineStore('auth', {
     },
 
     logout() {
-      if (this.refreshToken) {
-        httpClient.post('/auth/logout', { refreshToken: this.refreshToken }).catch(console.error);
-      }
+      const tokenToRevoke = this.refreshToken;
 
       this.accessToken = null;
       this.refreshToken = null;
       this.userRole = null;
       this.userEmail = null;
       localStorage.clear();
+
+      if (tokenToRevoke) {
+        axios.post('http://localhost:8080/api/auth/logout', { refreshToken: tokenToRevoke })
+          .catch(() => {});
+      }
+
       window.location.href = '/login';
     }
   }

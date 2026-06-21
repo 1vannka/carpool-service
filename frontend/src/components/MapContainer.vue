@@ -8,96 +8,91 @@ import type { OfficeResponse } from '../types/office';
 
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-
 import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
 import iconUrl from 'leaflet/dist/images/marker-icon.png';
 import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 
 const customIcon = L.icon({
-  iconUrl: iconUrl,
-  iconRetinaUrl: iconRetinaUrl,
-  shadowUrl: shadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+  iconUrl, iconRetinaUrl, shadowUrl,
+  iconSize: [25, 41], iconAnchor: [12, 41], popupAnchor: [1, -34], shadowSize: [41, 41]
 });
 
 const props = defineProps<{
   offices: OfficeResponse[];
-  center: { lat: number, lng: number } | null
+  center: { lat: number, lng: number } | null;
+  driverRoute?: number[][] | null;
+  searchMarker?: { lat: number, lng: number } | null;
 }>();
 
 const emit = defineEmits(['office-click']);
 
 const map = shallowRef<L.Map | null>(null);
 const markers: L.Marker[] = [];
+const routeLayer = shallowRef<L.Polyline | null>(null);
+const searchMarkerLayer = shallowRef<L.Marker | null>(null);
 
 onMounted(() => {
   const startLat = props.center?.lat || 55.751244;
   const startLng = props.center?.lng || 37.618423;
 
-  map.value = L.map('map', {
-    zoomControl: false,
-    attributionControl: true
-  }).setView([startLat, startLng], 12);
-
+  map.value = L.map('map', { zoomControl: false, attributionControl: true }).setView([startLat, startLng], 12);
   map.value.attributionControl.setPrefix('');
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap contributors'
-  }).addTo(map.value);
-
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map.value);
   L.control.zoom({ position: 'bottomright' }).addTo(map.value);
-
   drawMarkers();
 });
 
-onUnmounted(() => {
-  if (map.value) map.value.remove();
-});
+onUnmounted(() => { if (map.value) map.value.remove(); });
 
 watch(() => props.center, (newCenter) => {
-  if (newCenter && map.value) {
+  if (newCenter && map.value && !props.searchMarker) {
     map.value.flyTo([newCenter.lat, newCenter.lng], 12, { duration: 1.5 });
   }
 });
 
 watch(() => props.offices, () => drawMarkers(), { deep: true });
 
+
+watch(() => props.driverRoute, (newRoute) => {
+  if (!map.value) return;
+  if (routeLayer.value) { map.value.removeLayer(routeLayer.value); routeLayer.value = null; }
+  if (newRoute && newRoute.length > 0) {
+    const latLngs = newRoute.map(coord => [coord[1], coord[0]] as [number, number]);
+    routeLayer.value = L.polyline(latLngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(map.value);
+    map.value.fitBounds(routeLayer.value.getBounds(), { padding: [50, 50] });
+  }
+}, { deep: true });
+
+watch(() => props.searchMarker, (newLoc) => {
+  if (!map.value) return;
+  if (searchMarkerLayer.value) {
+    map.value.removeLayer(searchMarkerLayer.value);
+    searchMarkerLayer.value = null;
+  }
+  if (newLoc) {
+    searchMarkerLayer.value = L.marker([newLoc.lat, newLoc.lng], { icon: customIcon }).addTo(map.value);
+    searchMarkerLayer.value.bindPopup('<b>Искомый адрес</b>').openPopup();
+    map.value.flyTo([newLoc.lat, newLoc.lng], 16, { duration: 1.5 });
+  }
+}, { deep: true });
+
 const drawMarkers = () => {
   markers.forEach(m => m.remove());
   markers.length = 0;
-
   if (!map.value) return;
 
   props.offices.forEach(office => {
-    const marker = L.marker([office.location[1]!, office.location[0]!], {
-      icon: customIcon
-    }).addTo(map.value!);
-
+    const marker = L.marker([office.location[1]!, office.location[0]!], { icon: customIcon }).addTo(map.value!);
     markers.push(marker);
     marker.on('click', () => emit('office-click', office));
   });
 };
 
-const getCenter = () => {
-  return map.value ? map.value.getCenter() : null;
-};
-
+const getCenter = () => map.value ? map.value.getCenter() : null;
 defineExpose({ getCenter });
 </script>
 
 <style scoped>
-:deep(.leaflet-control-attribution) {
-  font-size: 0.6rem !important;
-  opacity: 0.5 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-}
-:deep(.leaflet-control-attribution a) {
-  color: #555 !important;
-  text-decoration: none;
-}
+:deep(.leaflet-control-attribution) { font-size: 0.6rem !important; opacity: 0.5 !important; background: transparent !important; box-shadow: none !important; }
+:deep(.leaflet-control-attribution a) { color: #555 !important; text-decoration: none; }
 </style>

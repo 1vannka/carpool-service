@@ -1,5 +1,5 @@
 <template>
-  <div class="absolute top-4 left-4 z-10 flex flex-col gap-2 w-72">
+  <div class="absolute top-20 md:top-4 left-4 right-16 md:right-auto z-10 flex flex-col gap-2 md:w-72 transition-all">
     <Select
       :modelValue="modelValue"
       @update:modelValue="$emit('update:modelValue', $event)"
