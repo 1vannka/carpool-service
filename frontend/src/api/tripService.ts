@@ -1,5 +1,5 @@
 import httpClient from './httpClient';
-import type {TripCreateRequest,TripResponse} from '../types/trip.ts';
+import type {TripCreateRequest,TripResponse, TripDetailedResponse} from '../types/trip.ts';
 
 export const tripService = {
   async createTrip(request: TripCreateRequest): Promise<TripResponse> {
@@ -24,5 +24,22 @@ export const tripService = {
 
   async cancelTrip(id: number): Promise<void> {
     await httpClient.delete(`/trips/${id}`);
+  },
+
+  async getMatchingTrips(): Promise<TripDetailedResponse[]> {
+    try {
+      const { data } = await httpClient.get('/trips/matching');
+      return data;
+    } catch (error: any) {
+      if (error.response?.status === 400 || error.response?.status === 404) return [];
+      throw error;
+    }
+  },
+
+  async getAvailableTrips(officeId: number): Promise<TripResponse[]> {
+    const { data } = await httpClient.get('/trips', {
+      params: { officeId }
+    });
+    return data;
   }
 };

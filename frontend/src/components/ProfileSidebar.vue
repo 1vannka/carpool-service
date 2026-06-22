@@ -83,6 +83,75 @@
           <span class="text-xs text-gray-500">(±{{ activeRideRequest.toleranceTime }} мин)</span>
         </div>
         <Button label="Отменить заявку" severity="danger" outlined size="small" class="mt-2 w-full bg-white" @click="$emit('cancel-ride', activeRideRequest.id)" />
+        <div v-if="matchingTrips && matchingTrips.length > 0" class="mt-4 pt-4 border-t border-amber-200">
+          <div class="text-sm font-bold text-amber-800 mb-2 flex items-center gap-2">
+            <i class="pi pi-sparkles"></i> Найдено подходящих поездок: {{ matchingTrips.length }}
+          </div>
+
+          <div class="flex flex-col gap-3">
+            <div v-for="trip in matchingTrips" :key="trip.id" class="bg-white border border-amber-100 p-3 rounded-lg shadow-sm flex flex-col gap-2 transition-all">
+
+              <div class="flex justify-between items-center cursor-pointer" @click="toggleTripDetails(trip.id)">
+                <div class="flex flex-col">
+                  <span class="text-sm font-bold text-gray-800">
+                    {{ new Date(trip.departureTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
+                  </span>
+                  <span class="text-xs font-bold text-gray-700 mt-1">
+                    {{ trip.driverFirstName }} {{ trip.driverLastName || 'Водитель' }}
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <div class="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded">
+                    Мест: {{ trip.availableSeats }}
+                  </div>
+                  <i :class="['pi text-gray-400 text-sm transition-transform duration-200', expandedTrips.has(trip.id) ? 'pi-chevron-up' : 'pi-chevron-down']"></i>
+                </div>
+              </div>
+
+              <div v-if="expandedTrips.has(trip.id)" class="mt-1 pt-2 border-t border-gray-100 text-xs text-gray-600 flex flex-col gap-1">
+                <div><i class="pi pi-car mr-1"></i> Авто: {{ trip.carColor }} {{ trip.carModel }}</div>
+                <div><i class="pi pi-id-card mr-1"></i> Гос. номер: <span class="uppercase font-mono">{{ trip.carPlate }}</span></div>
+              </div>
+
+              <div class="flex gap-2 mt-1">
+                <Button
+                  icon="pi pi-map"
+                  label="Маршрут"
+                  severity="help"
+                  outlined
+                  size="small"
+                  class="flex-1 text-xs py-1 px-2"
+                  @click="$emit('preview-matched-route', trip.routePath)"
+                />
+                <Button
+                  icon="pi pi-user-plus"
+                  label="Попроситься"
+                  severity="success"
+                  size="small"
+                  class="flex-1 text-xs py-1 px-2"
+                  @click="alert('Тут будет отправка заявки водителю!')"
+                />
+              </div>
+
+            </div>
+          </div>
+
+          <Button
+            label="Скрыть маршрут с карты"
+            text
+            size="small"
+            severity="secondary"
+            class="w-full mt-2 text-xs"
+            @click="$emit('preview-matched-route', null)"
+          />
+        </div>
+
+        <div v-else class="mt-4 pt-4 border-t border-amber-200 text-center text-amber-700 text-sm">
+          <i class="pi pi-search mb-1 text-xl"></i>
+          <p>Пока подходящих машин нет.</p>
+          <p class="text-xs text-amber-600">Мы сообщим, когда кто-то поедет по вашему маршруту!</p>
+        </div>
       </div>
 
       <div v-if="activeTrip" class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col gap-2 mb-4 shrink-0 shadow-sm">
@@ -120,7 +189,7 @@ import Divider from 'primevue/divider';
 import { profileService} from '../api/profileService';
 import type {UserProfileResponse} from '../types/user'
 import type { RideRequestResponse } from '../types/ride.ts';
-import type {TripResponse} from '../types/trip.ts'
+import type {TripResponse, TripDetailedResponse} from '../types/trip.ts'
 
 const props = defineProps<{
   visible: boolean;
@@ -128,8 +197,9 @@ const props = defineProps<{
   rideRequestAddress: string;
   activeTrip: TripResponse | null;
   tripAddress: string;
+  matchingTrips?: TripDetailedResponse[];
 }>();
-const emit = defineEmits(['update:visible', 'logout', 'cancel-ride', 'cancel-trip', 'edit-trip']);
+const emit = defineEmits(['update:visible', 'logout', 'cancel-ride', 'cancel-trip', 'edit-trip', 'preview-matched-route']);
 
 const profile = ref<UserProfileResponse | null>(null);
 const isLoading = ref(false);
@@ -155,6 +225,18 @@ watch(() => props.visible, (newVal) => {
     fetchProfile();
   }
 });
+
+const expandedTrips = ref<Set<number>>(new Set());
+
+const toggleTripDetails = (tripId: number) => {
+  const newSet = new Set(expandedTrips.value);
+  if (newSet.has(tripId)) {
+    newSet.delete(tripId);
+  } else {
+    newSet.add(tripId);
+  }
+  expandedTrips.value = newSet;
+};
 
 const startEdit = () => {
   editForm.value.telegramAlias = profile.value?.telegramAlias || '';

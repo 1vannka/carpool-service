@@ -1,11 +1,14 @@
 package com.carpool.controller.trip;
 
+import com.carpool.controller.common.BiResponseMapper;
 import com.carpool.controller.common.RequestMapper;
 import com.carpool.controller.common.ResponseMapper;
 import com.carpool.controller.dto.trip.TripCreateRequest;
+import com.carpool.controller.dto.trip.TripDetailedResponse;
 import com.carpool.controller.dto.trip.TripResponse;
 import com.carpool.controller.dto.trip.TripUpdateRequest;
 import com.carpool.domain.model.trip.Trip;
+import com.carpool.domain.model.user.User;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
@@ -13,7 +16,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, ResponseMapper<Trip, TripResponse> {
+public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, ResponseMapper<Trip, TripResponse>, BiResponseMapper<Trip, User, TripDetailedResponse> {
 
     private final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
@@ -56,6 +59,30 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
         return new TripResponse(
                 domain.getId(),
                 domain.getOfficeId(),
+                domain.getDepartureTime(),
+                domain.getEstimatedDuration(),
+                domain.getTotalSeats(),
+                domain.getAvailableSeats(),
+                domain.getCarModel(),
+                domain.getCarColor(),
+                domain.getCarPlate(),
+                domain.getStatus(),
+                lineStringToCoordinates(domain.getRoutePath())
+        );
+    }
+
+    @Override
+    public TripDetailedResponse toDetailedDto(Trip domain, User user){
+        if (domain == null) return null;
+
+        String firstName = user.getFirstName();
+        String lastName = user.getLastName();
+
+        return new TripDetailedResponse(
+                domain.getId(),
+                domain.getOfficeId(),
+                firstName,
+                lastName,
                 domain.getDepartureTime(),
                 domain.getEstimatedDuration(),
                 domain.getTotalSeats(),

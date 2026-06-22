@@ -34,7 +34,7 @@
       :center="selectedCity"
       :driverRoute="currentDriverRoute"
       :searchMarker="globalSearchMarker"
-      :passengerMarker="activeRideRequest ? { lat: activeRideRequest.pickupLocation[1], lng: activeRideRequest.pickupLocation[0] } : null"
+      :passengerMarker="activeRideRequest ? { lat: activeRideRequest.pickupLocation[1]!, lng: activeRideRequest.pickupLocation[0]! } : null"
       @office-click="openOfficeDialog"
     />
 
@@ -62,10 +62,12 @@
       :rideRequestAddress="activeRideRequestAddress"
       :activeTrip="activeTrip"
       :tripAddress="activeTripAddress"
+      :matchingTrips="matchingTrips"
+      @preview-matched-route="(route) => currentDriverRoute = route"
       @cancel-ride="handleCancelRideRequest"
       @cancel-trip="handleCancelTrip"
-      @logout="logout"
       @edit-trip="startEditTrip"
+      @logout="logout"
     />
 
     <LocationCrosshair
@@ -131,7 +133,7 @@ import { rideRequestService } from '../api/rideRequestService';
 import {tripService} from '../api/tripService.ts'
 import type { OfficeResponse } from '../types/office';
 import type { RideRequestResponse } from '../types/ride';
-import type {TripResponse} from '../types/trip.ts'
+import type {TripResponse, TripDetailedResponse} from '../types/trip.ts'
 import { useRouting } from '../composables/useRouting';
 
 import MapContainer from '../components/MapContainer.vue';
@@ -186,6 +188,8 @@ const isCreatingTask = ref(false);
 const activeRideRequest = ref<RideRequestResponse | null>(null);
 const activeRideRequestAddress = ref<string>('');
 
+const matchingTrips = ref<TripDetailedResponse[]>([]);
+
 const adminCreateForm = ref({ name: '', city: '', address: '', location: [] as number[] });
 
 const loadOffices = async () => {
@@ -198,6 +202,18 @@ const loadOffices = async () => {
   });
   cities.value = Array.from(uniqueCitiesMap.values());
   selectedCity.value = cities.value[0] || null;
+};
+
+const loadMatchingTrips = async () => {
+  if (activeRideRequest.value) {
+    try {
+      matchingTrips.value = await tripService.getMatchingTrips();
+    } catch (e) {
+      matchingTrips.value = [];
+    }
+  } else {
+    matchingTrips.value = [];
+  }
 };
 
 const handleGlobalMapSearch = async () => {
@@ -411,6 +427,7 @@ const submitPassengerRequest = async (form: any) => {
     });
     isOfficeDialogVisible.value = false;
     await loadActiveRideRequest();
+    await loadMatchingTrips();
     isProfileSidebarVisible.value = true;
   } catch (e: any) {
     alert(e.response?.data?.error || "Ошибка при создании заявки");
@@ -467,6 +484,7 @@ const updateDriverRequest = async (payload: { id: number, dto: any }) => {
 onMounted(async () => {
   await loadOffices();
   await loadActiveRideRequest();
+  await loadMatchingTrips();
   await loadActiveTrip();
 });
 
