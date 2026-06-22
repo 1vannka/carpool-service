@@ -79,10 +79,30 @@
         </div>
         <div class="text-sm text-gray-700 font-medium"> {{ rideRequestAddress || 'Загрузка адреса...' }}</div>
         <div class="text-sm text-gray-700">
-          🕒 {{ new Date(activeRideRequest.targetTime).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) }}
+           {{ new Date(activeRideRequest.targetTime).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) }}
           <span class="text-xs text-gray-500">(±{{ activeRideRequest.toleranceTime }} мин)</span>
         </div>
         <Button label="Отменить заявку" severity="danger" outlined size="small" class="mt-2 w-full bg-white" @click="$emit('cancel-ride', activeRideRequest.id)" />
+      </div>
+
+      <div v-if="activeTrip" class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl flex flex-col gap-2 mb-4 shrink-0 shadow-sm">
+        <div class="flex items-center gap-2 text-emerald-700 font-bold">
+          <i class="pi pi-car"></i> Везу коллег
+        </div>
+        <div class="text-sm text-gray-700 font-medium">Старт: {{ tripAddress || 'Загрузка адреса...' }}</div>
+        <div class="text-sm text-gray-700">
+           {{ new Date(activeTrip.departureTime).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) }}
+        </div>
+        <div class="text-sm text-gray-700">
+           {{ activeTrip.carColor }} {{ activeTrip.carModel }} • <span class="uppercase">{{ activeTrip.carPlate }}</span>
+        </div>
+        <div class="text-sm text-gray-700">
+           Свободно мест: <span class="font-bold">{{ activeTrip.availableSeats }}</span> из {{ activeTrip.totalSeats }}
+        </div>
+        <div class="flex gap-2 mt-2">
+          <Button label="Изменить" icon="pi pi-pencil" severity="secondary" outlined size="small" class="flex-1 bg-white" @click="$emit('edit-trip')" />
+          <Button label="Отменить" icon="pi pi-times" severity="danger" outlined size="small" class="flex-1 bg-white" @click="$emit('cancel-trip', activeTrip.id)" />
+        </div>
       </div>
 
       <div class="pt-4 mt-4 border-t border-gray-100">
@@ -100,13 +120,16 @@ import Divider from 'primevue/divider';
 import { profileService} from '../api/profileService';
 import type {UserProfileResponse} from '../types/user'
 import type { RideRequestResponse } from '../types/ride.ts';
+import type {TripResponse} from '../types/trip.ts'
 
 const props = defineProps<{
   visible: boolean;
   activeRideRequest: RideRequestResponse | null;
   rideRequestAddress: string;
+  activeTrip: TripResponse | null;
+  tripAddress: string;
 }>();
-const emit = defineEmits(['update:visible', 'logout', 'cancel-ride']);
+const emit = defineEmits(['update:visible', 'logout', 'cancel-ride', 'cancel-trip', 'edit-trip']);
 
 const profile = ref<UserProfileResponse | null>(null);
 const isLoading = ref(false);

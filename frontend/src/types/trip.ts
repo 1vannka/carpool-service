@@ -1,10 +1,24 @@
 export interface TripCreateRequest {
-  officeId: number | null;
-  departureTime: Date | null;
-  estimatedDuration: number | null;
+  officeId: number;
+  departureTime: string; // Формат Date/ISO
+  estimatedDuration: number;
   totalSeats: number;
   carModel: string;
   carColor: string;
   carPlate: string;
+  routePath: number[][]; // Массив координат
+}
+
+export interface TripResponse {
+  id: number;
+  officeId: number;
+  departureTime: string;
+  estimatedDuration: number;
+  totalSeats: number;
+  availableSeats: number;
+  carModel: string;
+  carColor: string;
+  carPlate: string;
+  status: string;
   routePath: number[][];
 }

@@ -31,67 +31,7 @@ const map = shallowRef<L.Map | null>(null);
 const markers: L.Marker[] = [];
 const routeLayer = shallowRef<L.Polyline | null>(null);
 const searchMarkerLayer = shallowRef<L.Marker | null>(null);
-
-onMounted(() => {
-  const startLat = props.center?.lat || 55.751244;
-  const startLng = props.center?.lng || 37.618423;
-
-  map.value = L.map('map', { zoomControl: false, attributionControl: true }).setView([startLat, startLng], 12);
-  map.value.attributionControl.setPrefix('');
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map.value);
-  L.control.zoom({ position: 'bottomright' }).addTo(map.value);
-  drawMarkers();
-});
-
-onUnmounted(() => { if (map.value) map.value.remove(); });
-
-watch(() => props.center, (newCenter) => {
-  if (newCenter && map.value && !props.searchMarker) {
-    map.value.flyTo([newCenter.lat, newCenter.lng], 12, { duration: 1.5 });
-  }
-});
-
-watch(() => props.offices, () => drawMarkers(), { deep: true });
-
-
-watch(() => props.driverRoute, (newRoute) => {
-  if (!map.value) return;
-  if (routeLayer.value) { map.value.removeLayer(routeLayer.value); routeLayer.value = null; }
-  if (newRoute && newRoute.length > 0) {
-    const latLngs = newRoute.map(coord => [coord[1], coord[0]] as [number, number]);
-    routeLayer.value = L.polyline(latLngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(map.value);
-    map.value.fitBounds(routeLayer.value.getBounds(), { padding: [50, 50] });
-  }
-}, { deep: true });
-
-watch(() => props.searchMarker, (newLoc) => {
-  if (!map.value) return;
-  if (searchMarkerLayer.value) {
-    map.value.removeLayer(searchMarkerLayer.value);
-    searchMarkerLayer.value = null;
-  }
-  if (newLoc) {
-    searchMarkerLayer.value = L.marker([newLoc.lat, newLoc.lng], { icon: customIcon }).addTo(map.value);
-    searchMarkerLayer.value.bindPopup('<b>Искомый адрес</b>').openPopup();
-    map.value.flyTo([newLoc.lat, newLoc.lng], 16, { duration: 1.5 });
-  }
-}, { deep: true });
-
 const passengerMarkerLayer = shallowRef<L.CircleMarker | null>(null);
-
-watch(() => props.passengerMarker, (newLoc) => {
-  if (!map.value) return;
-  if (passengerMarkerLayer.value) {
-    map.value.removeLayer(passengerMarkerLayer.value);
-    passengerMarkerLayer.value = null;
-  }
-  if (newLoc) {
-    passengerMarkerLayer.value = L.circleMarker([newLoc.lat, newLoc.lng], {
-      radius: 8, color: '#d97706', fillColor: '#fcd34d', fillOpacity: 0.9, weight: 3
-    }).addTo(map.value);
-    passengerMarkerLayer.value.bindPopup('<b>Ваша точка посадки</b>');
-  }
-}, { deep: true });
 
 const drawMarkers = () => {
   markers.forEach(m => m.remove());
@@ -104,6 +44,64 @@ const drawMarkers = () => {
     marker.on('click', () => emit('office-click', office));
   });
 };
+
+const drawRoute = (newRoute: number[][] | null | undefined) => {
+  if (!map.value) return;
+  if (routeLayer.value) { map.value.removeLayer(routeLayer.value); routeLayer.value = null; }
+  if (newRoute && newRoute.length > 0) {
+    const latLngs = newRoute.map(coord => [coord[1], coord[0]] as [number, number]);
+    routeLayer.value = L.polyline(latLngs, { color: '#3b82f6', weight: 5, opacity: 0.8 }).addTo(map.value);
+    map.value.fitBounds(routeLayer.value.getBounds(), { padding: [50, 50] });
+  }
+};
+
+const drawPassengerMarker = (newLoc: { lat: number, lng: number } | null | undefined) => {
+  if (!map.value) return;
+  if (passengerMarkerLayer.value) { map.value.removeLayer(passengerMarkerLayer.value); passengerMarkerLayer.value = null; }
+  if (newLoc) {
+    passengerMarkerLayer.value = L.circleMarker([newLoc.lat, newLoc.lng], {
+      radius: 8, color: '#d97706', fillColor: '#fcd34d', fillOpacity: 0.9, weight: 3
+    }).addTo(map.value);
+    passengerMarkerLayer.value.bindPopup('<b>Ваша точка посадки</b>');
+  }
+};
+
+onMounted(() => {
+  const startLat = props.center?.lat || 55.751244;
+  const startLng = props.center?.lng || 37.618423;
+
+  map.value = L.map('map', { zoomControl: false, attributionControl: true }).setView([startLat, startLng], 12);
+  map.value.attributionControl.setPrefix('');
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map.value);
+  L.control.zoom({ position: 'bottomright' }).addTo(map.value);
+
+  drawMarkers();
+  drawRoute(props.driverRoute);
+  drawPassengerMarker(props.passengerMarker);
+});
+
+onUnmounted(() => { if (map.value) map.value.remove(); });
+
+watch(() => props.center, (newCenter) => {
+  if (newCenter && map.value && !props.searchMarker) {
+    map.value.flyTo([newCenter.lat, newCenter.lng], 12, { duration: 1.5 });
+  }
+});
+
+watch(() => props.offices, () => drawMarkers(), { deep: true, immediate: true });
+
+watch(() => props.driverRoute, (newRoute) => drawRoute(newRoute), { deep: true, immediate: true });
+watch(() => props.passengerMarker, (newLoc) => drawPassengerMarker(newLoc), { deep: true, immediate: true });
+
+watch(() => props.searchMarker, (newLoc) => {
+  if (!map.value) return;
+  if (searchMarkerLayer.value) { map.value.removeLayer(searchMarkerLayer.value); searchMarkerLayer.value = null; }
+  if (newLoc) {
+    searchMarkerLayer.value = L.marker([newLoc.lat, newLoc.lng], { icon: customIcon }).addTo(map.value);
+    searchMarkerLayer.value.bindPopup('<b>Искомый адрес</b>').openPopup();
+    map.value.flyTo([newLoc.lat, newLoc.lng], 16, { duration: 1.5 });
+  }
+}, { deep: true });
 
 const getCenter = () => map.value ? map.value.getCenter() : null;
 defineExpose({ getCenter });

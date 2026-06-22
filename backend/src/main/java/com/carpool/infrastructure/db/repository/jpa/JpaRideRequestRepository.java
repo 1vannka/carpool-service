@@ -16,13 +16,13 @@ public interface JpaRideRequestRepository extends JpaRepository<RideRequestEntit
     Optional<RideRequestEntity> findByPassengerIdAndStatus(Long passengerId, RideRequestStatus status);
 
     @Query(value = """
-        SELECT r.* FROM ride_requests r
-        WHERE r.office_id = :officeId
-          AND r.status = 'PENDING'
-          AND r.target_time >= (:tripTime - (r.tolerance_time * interval '1 minute'))
-          AND r.target_time <= (:tripTime + (:estimatedDuration * interval '1 minute') + (r.tolerance_time * interval '1 minute'))
-          AND ST_DWithin(CAST(r.pickup_location AS geography), CAST(:routePath AS geography), :radiusMeters)
-        """, nativeQuery = true)
+    SELECT r.* FROM ride_requests r
+    WHERE r.office_id = :officeId
+      AND r.status = 'PENDING'
+      AND r.target_time >= (CAST(:tripTime AS TIMESTAMPTZ) - (r.tolerance_time * interval '1 minute'))
+      AND r.target_time <= (CAST(:tripTime AS TIMESTAMPTZ) + (CAST(:estimatedDuration AS INTEGER) * interval '1 minute') + (r.tolerance_time * interval '1 minute'))
+      AND ST_DWithin(CAST(r.pickup_location AS geography), CAST(:routePath AS geography), :radiusMeters)
+    """, nativeQuery = true)
     List<RideRequestEntity> findMatchingRequestsForTrip(
             @Param("officeId") Long officeId,
             @Param("routePath") org.locationtech.jts.geom.LineString routePath,

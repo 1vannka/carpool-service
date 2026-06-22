@@ -81,8 +81,7 @@
       </div>
       <div class="flex justify-between mt-4">
         <Button label="Назад" text severity="secondary" @click="activeTab = null" />
-        <Button label="Оформить заявку" @click="$emit('submit-passenger', passengerForm)" :disabled="!isPassengerFormValid" />
-      </div>
+        <Button label="Оформить заявку" @click="submitPassenger" :disabled="!isPassengerFormValid" :loading="isSubmitting" />      </div>
     </div>
 
     <div v-else-if="activeTab === 'driver'" class="flex flex-col gap-4 pb-4 overflow-y-auto">
@@ -129,10 +128,17 @@
       </div>
 
       <div class="flex justify-between mt-2 pt-4 border-t border-gray-100">
-        <Button label="Назад" text severity="secondary" @click="activeTab = null" />
+        <Button v-if="!editTripData" label="Назад" text severity="secondary" @click="activeTab = null" />
         <Button v-if="!isRouteBuilt" label="Построить" severity="help" icon="pi pi-map" :loading="isLoadingRoute" @click="buildDriverRoute" :disabled="driverForm.routePath.length === 0" />
-        <Button v-else label="Создать" severity="success" icon="pi pi-check" @click="submitDriver" :disabled="!isDriverFormValid" />
-      </div>
+        <Button
+          v-else
+          :label="editTripData ? 'Сохранить изменения' : 'Создать'"
+          severity="success"
+          icon="pi pi-check"
+          @click="submitDriver"
+          :disabled="!isDriverFormValid"
+          :loading="isSubmitting"
+        />      </div>
     </div>
   </Drawer>
 </template>
@@ -143,14 +149,36 @@ import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import Divider from 'primevue/divider';
 import type { OfficeResponse } from '../types/office';
-import type { TripCreateRequest } from '../types/trip';
+import type { TripCreateRequest, TripResponse } from '../types/trip';
 import { useRouting } from '../composables/useRouting';
 
-const props = defineProps<{ visible: boolean; office: OfficeResponse | null; isAdmin: boolean; hasActiveTask: boolean }>();
-const emit = defineEmits(['update:visible', 'request-location', 'delete', 'update', 'submit-passenger', 'submit-driver', 'route-preview', 'set-map-marker']);
+const props = defineProps<{
+  visible: boolean;
+  office: OfficeResponse | null;
+  isAdmin: boolean;
+  hasActiveTask: boolean;
+  isSubmitting: boolean;
+  editTripData?: TripResponse | null;
+}>();
 
+const emit = defineEmits(['update:visible', 'request-location', 'delete', 'update', 'submit-passenger', 'submit-driver', 'update-driver', 'route-preview', 'set-map-marker']);
 const isMobile = ref(window.innerWidth < 768);
 const checkMobile = () => isMobile.value = window.innerWidth < 768;
+
+const formatIsoToInput = (isoStr: string): string => {
+  if (!isoStr) return '';
+  const date = new Date(isoStr);
+  const userOffset = date.getTimezoneOffset() * 60000;
+  const localTime = new Date(date.getTime() - userOffset);
+  return localTime.toISOString().slice(0, 16);
+};
+
+const formatInputToUtcIso = (inputStr: string): string => {
+  if (!inputStr) return '';
+  const date = new Date(inputStr);
+  return date.toISOString();
+};
+
 onMounted(() => window.addEventListener('resize', checkMobile));
 onUnmounted(() => window.removeEventListener('resize', checkMobile));
 
@@ -179,25 +207,46 @@ const isAdminFormValid = computed(() => editForm.value.name.trim().length > 1 &&
 const isPassengerFormValid = computed(() => passengerForm.value.pickupLocation.length === 2 && passengerForm.value.targetTime && new Date(passengerForm.value.targetTime) > new Date() && passengerForm.value.toleranceTime !== null && passengerForm.value.toleranceTime >= 0);
 const isDriverFormValid = computed(() => isRouteBuilt.value && driverForm.value.departureTime && new Date(driverForm.value.departureTime) > new Date() && driverForm.value.carModel.trim().length >= 2 && driverForm.value.carColor.trim().length >= 2 && /^[А-ЯA-Z0-9-]{4,10}$/i.test(driverForm.value.carPlate.trim().toUpperCase()) && driverForm.value.totalSeats >= 1 && driverForm.value.totalSeats <= 8 && driverForm.value.estimatedDuration > 0);
 
-watch(() => props.office, (newOffice) => {
-  activeTab.value = null;
-  isRouteBuilt.value = false;
-  emit('route-preview', null);
-
-  if (newOffice) {
-    editForm.value = { ...newOffice };
-    passengerForm.value.officeId = newOffice.id;
-    driverForm.value.officeId = newOffice.id;
-
-    clearPassengerLocation();
-    clearDriverLocation();
-  }
-});
-
-watch(() => props.visible, (newVal) => {
-  if (!newVal) {
+watch(() => props.visible, (isVisible) => {
+  if (!isVisible) {
     emit('route-preview', null);
     emit('set-map-marker', null);
+    return;
+  }
+
+  if (props.office) {
+    if (isRestoringFromMap) {
+      isRestoringFromMap = false;
+      return;
+    }
+
+    editForm.value = { ...props.office };
+    passengerForm.value.officeId = props.office.id;
+    driverForm.value.officeId = props.office.id;
+
+    if (props.editTripData) {
+      activeTab.value = 'driver';
+      const trip = props.editTripData;
+      driverForm.value = {
+        officeId: trip.officeId,
+        departureTime: formatIsoToInput(trip.departureTime),
+        estimatedDuration: trip.estimatedDuration,
+        totalSeats: trip.totalSeats,
+        carModel: trip.carModel,
+        carColor: trip.carColor,
+        carPlate: trip.carPlate,
+        routePath: trip.routePath
+      };
+      isRouteBuilt.value = true;
+      driverResolvedAddress.value = "Текущая точка старта";
+      emit('route-preview', trip.routePath);
+    } else {
+      activeTab.value = null;
+      isRouteBuilt.value = false;
+      clearPassengerLocation();
+      clearDriverLocation();
+      emit('route-preview', null);
+    }
   }
 });
 
@@ -256,7 +305,11 @@ const openAdminEdit = () => {
   activeTab.value = 'admin_edit';
 };
 
+let isRestoringFromMap = false;
+
 const updateLocation = (target: string, lon: number, lat: number, address?: string) => {
+  isRestoringFromMap = true;
+
   if (target === 'admin_edit') {
     editForm.value.location = [lon, lat];
   } else if (target === 'passenger') {
@@ -286,13 +339,39 @@ const buildDriverRoute = async () => {
   }
 };
 
+let isEmitting = false;
+
 const submitDriver = () => {
+  if (isEmitting) return;
+  isEmitting = true;
+
   const dto: TripCreateRequest = {
     ...driverForm.value,
     carPlate: driverForm.value.carPlate.toUpperCase().replace(/\s/g, ''),
-    departureTime: driverForm.value.departureTime ? new Date(driverForm.value.departureTime) : null
+    departureTime: driverForm.value.departureTime ? formatInputToUtcIso(driverForm.value.departureTime) : null as any
   };
-  emit('submit-driver', dto);
+
+  if (props.editTripData) {
+    emit('update-driver', { id: props.editTripData.id, dto });
+  } else {
+    emit('submit-driver', dto);
+  }
+
+  setTimeout(() => { isEmitting = false; }, 2000);
+};
+
+const submitPassenger = () => {
+  if (isEmitting) return;
+  isEmitting = true;
+
+  const dto = {
+    ...passengerForm.value,
+    targetTime: passengerForm.value.targetTime ? formatInputToUtcIso(passengerForm.value.targetTime) : null as any
+  };
+
+  emit('submit-passenger', dto);
+
+  setTimeout(() => { isEmitting = false; }, 2000);
 };
 
 defineExpose({ updateLocation });

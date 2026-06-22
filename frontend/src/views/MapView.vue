@@ -60,8 +60,12 @@
       v-model:visible="isProfileSidebarVisible"
       :activeRideRequest="activeRideRequest"
       :rideRequestAddress="activeRideRequestAddress"
+      :activeTrip="activeTrip"
+      :tripAddress="activeTripAddress"
       @cancel-ride="handleCancelRideRequest"
+      @cancel-trip="handleCancelTrip"
       @logout="logout"
+      @edit-trip="startEditTrip"
     />
 
     <LocationCrosshair
@@ -76,13 +80,16 @@
       v-model:visible="isOfficeDialogVisible"
       :office="selectedOffice"
       :isAdmin="authStore.isAdmin"
-      :hasActiveTask="!!activeRideRequest"
+      :hasActiveTask="!!activeRideRequest || (!!activeTrip && !isEditingTrip)"
+      :isSubmitting="isCreatingTask"
+      :editTripData="isEditingTrip ? activeTrip : null"
       @request-location="startLocationSelection"
       @delete="handleDeleteOffice"
       @update="handleUpdateOffice"
       @submit-passenger="submitPassengerRequest"
       @submit-driver="submitDriverRequest"
-      @route-preview="(route) => currentDriverRoute = route"
+      @update-driver="updateDriverRequest"
+      @route-preview="(route) => currentDriverRoute = route || (activeTrip ? activeTrip.routePath : null)"
       @set-map-marker="(loc) => globalSearchMarker = loc"
     />
 
@@ -121,8 +128,10 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '../stores/authStore';
 import { officeService } from '../api/officeService';
 import { rideRequestService } from '../api/rideRequestService';
+import {tripService} from '../api/tripService.ts'
 import type { OfficeResponse } from '../types/office';
 import type { RideRequestResponse } from '../types/ride';
+import type {TripResponse} from '../types/trip.ts'
 import { useRouting } from '../composables/useRouting';
 
 import MapContainer from '../components/MapContainer.vue';
@@ -149,6 +158,9 @@ const globalSearchQuery = ref('');
 const isGlobalSearching = ref(false);
 const globalSearchMarker = ref<{ lat: number, lng: number } | null>(null);
 
+const activeTrip = ref<TripResponse | null>(null);
+const activeTripAddress = ref<string>('');
+
 const cityOffices = computed(() => {
   if (!selectedCity.value) return [];
   return allOffices.value.filter(o => o.city === selectedCity.value?.name);
@@ -161,6 +173,7 @@ watch(selectedCity, () => clearGlobalSearch());
 const isSelectingLocation = ref(false);
 const selectionTarget = ref<'passenger' | 'driver' | 'admin_create' | 'admin_edit' | null>(null);
 const isOfficeDialogVisible = ref(false);
+const isEditingTrip = ref(false);
 const isAdminCreateDialogVisible = ref(false);
 const selectedOffice = ref<OfficeResponse | null>(null);
 const isProfileSidebarVisible = ref(false);
@@ -168,6 +181,7 @@ const isProfileSidebarVisible = ref(false);
 const isAdminSelectMethodVisible = ref(false);
 const searchAddressQuery = ref('');
 const isGeocoding = ref(false);
+const isCreatingTask = ref(false);
 
 const activeRideRequest = ref<RideRequestResponse | null>(null);
 const activeRideRequestAddress = ref<string>('');
@@ -202,6 +216,48 @@ const handleGlobalMapSearch = async () => {
   } finally {
     isGlobalSearching.value = false;
   }
+};
+
+const loadActiveTrip = async () => {
+  try {
+    activeTrip.value = await tripService.getActiveTrip();
+    if (activeTrip.value && activeTrip.value.routePath && activeTrip.value.routePath.length > 0) {
+      currentDriverRoute.value = activeTrip.value.routePath;
+      activeTripAddress.value = await reverseGeocode(
+        activeTrip.value.routePath[0]![0],
+        activeTrip.value.routePath[0]![1]
+      );
+    }
+  } catch (e) {
+    console.error("Поездок не найдено или ошибка загрузки");
+  }
+};
+
+const handleCancelTrip = async (id: number) => {
+  if (!confirm('Точно отменить поездку? Все пассажиры будут уведомлены.')) return;
+  try {
+    await tripService.cancelTrip(id);
+    currentDriverRoute.value = null;
+    await loadActiveTrip();
+    alert('Поездка отменена');
+  } catch (e) {
+    alert('Ошибка при отмене поездки');
+  }
+};
+
+const startEditTrip = () => {
+  if (!activeTrip.value) return;
+  const targetOffice = allOffices.value.find(o => o.id === activeTrip.value!.officeId);
+  if (!targetOffice) {
+    alert("Офис назначения не найден на карте.");
+    return;
+  }
+
+  isProfileSidebarVisible.value = false;
+  selectedOffice.value = targetOffice;
+
+  isEditingTrip.value = true;
+  isOfficeDialogVisible.value = true;
 };
 
 const clearGlobalSearch = () => {
@@ -254,6 +310,10 @@ watch(isAdminCreateDialogVisible, (newVal) => {
   if (!newVal) {
     globalSearchMarker.value = null;
   }
+});
+
+watch(isOfficeDialogVisible, (newVal) => {
+  if (!newVal) isEditingTrip.value = false;
 });
 
 const startLocationSelection = (target: any) => {
@@ -333,34 +393,83 @@ const handleCancelRideRequest = async (id: number) => {
 };
 
 const submitPassengerRequest = async (form: any) => {
-  if (activeRideRequest.value) {
-    alert("У вас уже есть активная заявка! Отмените её в профиле.");
+  if (isCreatingTask.value) return;
+
+  if (activeRideRequest.value || activeTrip.value) {
+    alert("У вас уже есть активная заявка или поездка! Отмените её в профиле.");
     return;
   }
+
+  isCreatingTask.value = true;
   try {
     const targetTimeDate = new Date(form.targetTime);
-
     await rideRequestService.createRideRequest({
       officeId: form.officeId!,
       pickupLocation: form.pickupLocation,
       targetTime: targetTimeDate,
       toleranceTime: form.toleranceTime
     });
-
     isOfficeDialogVisible.value = false;
     await loadActiveRideRequest();
     isProfileSidebarVisible.value = true;
   } catch (e: any) {
     alert(e.response?.data?.error || "Ошибка при создании заявки");
+  } finally {
+    isCreatingTask.value = false;
   }
 };
 
-const submitDriverRequest = (data: any) => console.log("Водитель отправлен:", data);
+const submitDriverRequest = async (form: any) => {
+  if (isCreatingTask.value) return;
+
+  if (activeRideRequest.value || activeTrip.value) {
+    alert("У вас уже есть активная заявка или поездка!");
+    return;
+  }
+
+  isCreatingTask.value = true;
+  try {
+    await tripService.createTrip({
+      officeId: form.officeId!,
+      departureTime: new Date(form.departureTime).toISOString(),
+      estimatedDuration: form.estimatedDuration,
+      totalSeats: form.totalSeats,
+      carModel: form.carModel,
+      carColor: form.carColor,
+      carPlate: form.carPlate,
+      routePath: form.routePath
+    });
+    isOfficeDialogVisible.value = false;
+    await loadActiveTrip();
+    isProfileSidebarVisible.value = true;
+  } catch (e: any) {
+    alert(e.response?.data?.error || "Ошибка при создании поездки");
+  } finally {
+    isCreatingTask.value = false;
+  }
+};
+
+const updateDriverRequest = async (payload: { id: number, dto: any }) => {
+  if (isCreatingTask.value) return;
+  isCreatingTask.value = true;
+  try {
+    await tripService.updateTrip(payload.id, payload.dto);
+    isOfficeDialogVisible.value = false;
+    await loadActiveTrip();
+    isProfileSidebarVisible.value = true;
+  } catch (e: any) {
+    alert(e.response?.data?.error || "Ошибка при обновлении поездки");
+  } finally {
+    isCreatingTask.value = false;
+  }
+};
 
 onMounted(async () => {
   await loadOffices();
   await loadActiveRideRequest();
+  await loadActiveTrip();
 });
+
 const logout = () => authStore.logout();
 </script>
 
