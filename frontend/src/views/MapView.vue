@@ -46,8 +46,19 @@
     />
 
     <div v-if="!isSelectingLocation" class="absolute top-20 md:top-4 right-4 z-10 transition-all">
-      <Button icon="pi pi-sign-out" severity="danger" rounded class="shadow-lg" @click="logout" />
+      <Button
+        icon="pi pi-bars"
+        severity="secondary"
+        rounded
+        class="shadow-lg bg-white/90 backdrop-blur border-gray-200 text-gray-700 hover:text-purple-600"
+        @click="isProfileSidebarVisible = true"
+      />
     </div>
+
+    <ProfileSidebar
+      v-model:visible="isProfileSidebarVisible"
+      @logout="logout"
+    />
 
     <LocationCrosshair
       :isVisible="isSelectingLocation"
@@ -110,6 +121,7 @@ import MapContainer from '../components/MapContainer.vue';
 import CitySelector from '../components/CitySelector.vue';
 import LocationCrosshair from '../components/LocationPicker.vue';
 import OfficeDialog from '../components/OfficeActionDialog.vue';
+import ProfileSidebar from '../components/ProfileSidebar.vue';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
 
@@ -141,6 +153,7 @@ const selectionTarget = ref<'passenger' | 'driver' | 'admin_create' | 'admin_edi
 const isOfficeDialogVisible = ref(false);
 const isAdminCreateDialogVisible = ref(false);
 const selectedOffice = ref<OfficeResponse | null>(null);
+const isProfileSidebarVisible = ref(false);
 
 const isAdminSelectMethodVisible = ref(false);
 const searchAddressQuery = ref('');
