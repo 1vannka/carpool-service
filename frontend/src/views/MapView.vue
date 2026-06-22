@@ -34,6 +34,7 @@
       :center="selectedCity"
       :driverRoute="currentDriverRoute"
       :searchMarker="globalSearchMarker"
+      :passengerMarker="activeRideRequest ? { lat: activeRideRequest.pickupLocation[1], lng: activeRideRequest.pickupLocation[0] } : null"
       @office-click="openOfficeDialog"
     />
 
@@ -57,6 +58,9 @@
 
     <ProfileSidebar
       v-model:visible="isProfileSidebarVisible"
+      :activeRideRequest="activeRideRequest"
+      :rideRequestAddress="activeRideRequestAddress"
+      @cancel-ride="handleCancelRideRequest"
       @logout="logout"
     />
 
@@ -72,12 +76,14 @@
       v-model:visible="isOfficeDialogVisible"
       :office="selectedOffice"
       :isAdmin="authStore.isAdmin"
+      :hasActiveTask="!!activeRideRequest"
       @request-location="startLocationSelection"
       @delete="handleDeleteOffice"
       @update="handleUpdateOffice"
       @submit-passenger="submitPassengerRequest"
       @submit-driver="submitDriverRequest"
       @route-preview="(route) => currentDriverRoute = route"
+      @set-map-marker="(loc) => globalSearchMarker = loc"
     />
 
     <Dialog v-model:visible="isAdminSelectMethodVisible" modal header="Как добавить офис?" :style="{ width: '90vw', maxWidth: '400px' }">
@@ -114,7 +120,9 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { useAuthStore } from '../stores/authStore';
 import { officeService } from '../api/officeService';
+import { rideRequestService } from '../api/rideRequestService';
 import type { OfficeResponse } from '../types/office';
+import type { RideRequestResponse } from '../types/ride';
 import { useRouting } from '../composables/useRouting';
 
 import MapContainer from '../components/MapContainer.vue';
@@ -148,6 +156,8 @@ const cityOffices = computed(() => {
 
 watch(selectedCity, () => clearGlobalSearch());
 
+
+
 const isSelectingLocation = ref(false);
 const selectionTarget = ref<'passenger' | 'driver' | 'admin_create' | 'admin_edit' | null>(null);
 const isOfficeDialogVisible = ref(false);
@@ -158,6 +168,9 @@ const isProfileSidebarVisible = ref(false);
 const isAdminSelectMethodVisible = ref(false);
 const searchAddressQuery = ref('');
 const isGeocoding = ref(false);
+
+const activeRideRequest = ref<RideRequestResponse | null>(null);
+const activeRideRequestAddress = ref<string>('');
 
 const adminCreateForm = ref({ name: '', city: '', address: '', location: [] as number[] });
 
@@ -182,7 +195,7 @@ const handleGlobalMapSearch = async () => {
       query = `${selectedCity.value.name}, ${query}`;
     }
     const result = await geocodeAddress(query, selectedCity.value?.lng, selectedCity.value?.lat);
-    globalSearchMarker.value = { lat: result.location[1], lng: result.location[0] };
+    globalSearchMarker.value = { lat: result.location[1]!, lng: result.location[0]! };
     globalSearchQuery.value = result.address;
   } catch (e) {
     alert("Адрес не найден на карте.");
@@ -225,6 +238,9 @@ const handleGeocodeSearch = async () => {
     adminCreateForm.value.address = result.address;
     adminCreateForm.value.city = selectedCity.value?.name || '';
     adminCreateForm.value.name = '';
+
+    globalSearchMarker.value = { lat: result.location[1]!, lng: result.location[0]! };
+
     isAdminSelectMethodVisible.value = false;
     isAdminCreateDialogVisible.value = true;
   } catch (e) {
@@ -233,6 +249,12 @@ const handleGeocodeSearch = async () => {
     isGeocoding.value = false;
   }
 };
+
+watch(isAdminCreateDialogVisible, (newVal) => {
+  if (!newVal) {
+    globalSearchMarker.value = null;
+  }
+});
 
 const startLocationSelection = (target: any) => {
   isOfficeDialogVisible.value = false;
@@ -262,7 +284,9 @@ const confirmSelection = async () => {
     const address = await reverseGeocode(center.lng, center.lat);
     adminCreateForm.value.address = address;
   } else {
-    officeDialogRef.value?.updateLocation(selectionTarget.value!, center.lng, center.lat);
+    const address = await reverseGeocode(center.lng, center.lat);
+
+    officeDialogRef.value?.updateLocation(selectionTarget.value!, center.lng, center.lat, address);
     isOfficeDialogVisible.value = true;
     isSelectingLocation.value = false;
     selectionTarget.value = null;
@@ -287,10 +311,56 @@ const handleUpdateOffice = async (id: number, data: any) => {
   await loadOffices();
 };
 
-const submitPassengerRequest = (data: any) => console.log("Пассажир отправлен:", data);
+const loadActiveRideRequest = async () => {
+  activeRideRequest.value = await rideRequestService.getMyActiveRequest();
+  if (activeRideRequest.value) {
+    activeRideRequestAddress.value = await reverseGeocode(
+      activeRideRequest.value.pickupLocation[0]!,
+      activeRideRequest.value.pickupLocation[1]!
+    );
+  }
+};
+
+const handleCancelRideRequest = async (id: number) => {
+  if (!confirm('Точно отменить заявку?')) return;
+  try {
+    await rideRequestService.cancelRideRequest(id);
+    await loadActiveRideRequest();
+    alert('Заявка успешно отменена');
+  } catch (e) {
+    alert('Ошибка при отмене заявки');
+  }
+};
+
+const submitPassengerRequest = async (form: any) => {
+  if (activeRideRequest.value) {
+    alert("У вас уже есть активная заявка! Отмените её в профиле.");
+    return;
+  }
+  try {
+    const targetTimeDate = new Date(form.targetTime);
+
+    await rideRequestService.createRideRequest({
+      officeId: form.officeId!,
+      pickupLocation: form.pickupLocation,
+      targetTime: targetTimeDate,
+      toleranceTime: form.toleranceTime
+    });
+
+    isOfficeDialogVisible.value = false;
+    await loadActiveRideRequest();
+    isProfileSidebarVisible.value = true;
+  } catch (e: any) {
+    alert(e.response?.data?.error || "Ошибка при создании заявки");
+  }
+};
+
 const submitDriverRequest = (data: any) => console.log("Водитель отправлен:", data);
 
-onMounted(() => loadOffices());
+onMounted(async () => {
+  await loadOffices();
+  await loadActiveRideRequest();
+});
 const logout = () => authStore.logout();
 </script>
 

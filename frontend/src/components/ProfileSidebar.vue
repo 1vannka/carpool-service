@@ -73,6 +73,18 @@
         </div>
       </div>
 
+      <div v-if="activeRideRequest" class="bg-amber-50 border border-amber-200 p-4 rounded-xl flex flex-col gap-2 mb-4 shrink-0 shadow-sm">
+        <div class="flex items-center gap-2 text-amber-700 font-bold">
+          <i class="pi pi-directions"></i> Ищу машину
+        </div>
+        <div class="text-sm text-gray-700 font-medium"> {{ rideRequestAddress || 'Загрузка адреса...' }}</div>
+        <div class="text-sm text-gray-700">
+          🕒 {{ new Date(activeRideRequest.targetTime).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) }}
+          <span class="text-xs text-gray-500">(±{{ activeRideRequest.toleranceTime }} мин)</span>
+        </div>
+        <Button label="Отменить заявку" severity="danger" outlined size="small" class="mt-2 w-full bg-white" @click="$emit('cancel-ride', activeRideRequest.id)" />
+      </div>
+
       <div class="pt-4 mt-4 border-t border-gray-100">
         <Button label="Выйти из аккаунта" icon="pi pi-sign-out" severity="danger" text class="w-full" @click="$emit('logout')" />
       </div>
@@ -87,9 +99,14 @@ import Button from 'primevue/button';
 import Divider from 'primevue/divider';
 import { profileService} from '../api/profileService';
 import type {UserProfileResponse} from '../types/user'
+import type { RideRequestResponse } from '../types/ride.ts';
 
-const props = defineProps<{ visible: boolean }>();
-const emit = defineEmits(['update:visible', 'logout']);
+const props = defineProps<{
+  visible: boolean;
+  activeRideRequest: RideRequestResponse | null;
+  rideRequestAddress: string;
+}>();
+const emit = defineEmits(['update:visible', 'logout', 'cancel-ride']);
 
 const profile = ref<UserProfileResponse | null>(null);
 const isLoading = ref(false);

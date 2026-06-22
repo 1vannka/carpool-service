@@ -22,6 +22,7 @@ const props = defineProps<{
   center: { lat: number, lng: number } | null;
   driverRoute?: number[][] | null;
   searchMarker?: { lat: number, lng: number } | null;
+  passengerMarker?: { lat: number, lng: number } | null;
 }>();
 
 const emit = defineEmits(['office-click']);
@@ -73,6 +74,22 @@ watch(() => props.searchMarker, (newLoc) => {
     searchMarkerLayer.value = L.marker([newLoc.lat, newLoc.lng], { icon: customIcon }).addTo(map.value);
     searchMarkerLayer.value.bindPopup('<b>Искомый адрес</b>').openPopup();
     map.value.flyTo([newLoc.lat, newLoc.lng], 16, { duration: 1.5 });
+  }
+}, { deep: true });
+
+const passengerMarkerLayer = shallowRef<L.CircleMarker | null>(null);
+
+watch(() => props.passengerMarker, (newLoc) => {
+  if (!map.value) return;
+  if (passengerMarkerLayer.value) {
+    map.value.removeLayer(passengerMarkerLayer.value);
+    passengerMarkerLayer.value = null;
+  }
+  if (newLoc) {
+    passengerMarkerLayer.value = L.circleMarker([newLoc.lat, newLoc.lng], {
+      radius: 8, color: '#d97706', fillColor: '#fcd34d', fillOpacity: 0.9, weight: 3
+    }).addTo(map.value);
+    passengerMarkerLayer.value.bindPopup('<b>Ваша точка посадки</b>');
   }
 }, { deep: true });
 

@@ -11,9 +11,20 @@
     class="bg-white/95 backdrop-blur-md"
   >
     <div v-if="!activeTab" class="flex flex-col gap-3 py-2">
-      <p class="text-sm text-gray-500 mb-4">{{ office?.address }}</p>
-      <Button label="Ищу поездку (Пассажир)" icon="pi pi-user" outlined class="w-full" @click="activeTab = 'passenger'" />
-      <Button label="Создаю поездку (Водитель)" icon="pi pi-car" severity="success" class="w-full" @click="activeTab = 'driver'" />
+      <p class="text-sm text-gray-500 mb-4"> {{ office?.address }}</p>
+
+      <template v-if="hasActiveTask">
+        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 text-amber-800 text-sm text-center font-medium shadow-sm flex flex-col items-center gap-2">
+          <i class="pi pi-exclamation-triangle text-2xl"></i>
+          У вас уже есть активная заявка или поездка.<br>Отмените её в профиле, чтобы создать новую.
+        </div>
+      </template>
+
+      <template v-else>
+        <Button label="Ищу поездку (Пассажир)" icon="pi pi-user" outlined class="w-full" @click="activeTab = 'passenger'" />
+        <Button label="Создаю поездку (Водитель)" icon="pi pi-car" severity="success" class="w-full" @click="activeTab = 'driver'" />
+      </template>
+
       <template v-if="isAdmin">
         <Divider />
         <Button label="Редактировать офис" icon="pi pi-pencil" severity="help" class="w-full" @click="openAdminEdit" />
@@ -131,12 +142,12 @@ import { ref, watch, computed, onMounted, onUnmounted } from 'vue';
 import Button from 'primevue/button';
 import Drawer from 'primevue/drawer';
 import Divider from 'primevue/divider';
-import type { OfficeResponse } from '../api/officeService';
+import type { OfficeResponse } from '../types/office';
 import type { TripCreateRequest } from '../types/trip';
 import { useRouting } from '../composables/useRouting';
 
-const props = defineProps<{ visible: boolean; office: OfficeResponse | null; isAdmin: boolean }>();
-const emit = defineEmits(['update:visible', 'request-location', 'delete', 'update', 'submit-passenger', 'submit-driver', 'route-preview']);
+const props = defineProps<{ visible: boolean; office: OfficeResponse | null; isAdmin: boolean; hasActiveTask: boolean }>();
+const emit = defineEmits(['update:visible', 'request-location', 'delete', 'update', 'submit-passenger', 'submit-driver', 'route-preview', 'set-map-marker']);
 
 const isMobile = ref(window.innerWidth < 768);
 const checkMobile = () => isMobile.value = window.innerWidth < 768;
@@ -183,12 +194,24 @@ watch(() => props.office, (newOffice) => {
   }
 });
 
-watch(() => props.visible, (newVal) => { if (!newVal) emit('route-preview', null); });
+watch(() => props.visible, (newVal) => {
+  if (!newVal) {
+    emit('route-preview', null);
+    emit('set-map-marker', null);
+  }
+});
 
+watch(activeTab, (newTab) => {
+  if (!newTab) {
+    emit('route-preview', null);
+    emit('set-map-marker', null);
+  }
+});
 const clearPassengerLocation = () => {
   passengerForm.value.pickupLocation = [];
   passengerAddressQuery.value = '';
   passengerResolvedAddress.value = '';
+  emit('set-map-marker', null);
 };
 
 const clearDriverLocation = () => {
@@ -197,6 +220,7 @@ const clearDriverLocation = () => {
   driverResolvedAddress.value = '';
   isRouteBuilt.value = false;
   emit('route-preview', null);
+  emit('set-map-marker', null);
 };
 
 const searchPassengerAddress = async () => {
@@ -207,6 +231,8 @@ const searchPassengerAddress = async () => {
     const result = await geocodeAddress(query, props.office.location[0], props.office.location[1]);
     passengerForm.value.pickupLocation = result.location;
     passengerResolvedAddress.value = result.address;
+
+    emit('set-map-marker', { lat: result.location[1]!, lng: result.location[0]! });
   } catch (e) { alert("Адрес не найден. Уточните запрос."); } finally { isSearchingLocation.value = false; }
 };
 
@@ -216,10 +242,12 @@ const searchDriverAddress = async () => {
   try {
     const query = `${props.office.city}, ${driverAddressQuery.value}`;
     const result = await geocodeAddress(query, props.office.location[0], props.office.location[1]);
-    driverForm.value.routePath = [result.location, [props.office.location[0], props.office.location[1]]];
+    driverForm.value.routePath = [result.location, [props.office.location[0]!, props.office.location[1]!]];
     driverResolvedAddress.value = result.address;
     isRouteBuilt.value = false;
     emit('route-preview', null);
+
+    emit('set-map-marker', { lat: result.location[1]!, lng: result.location[0]! });
   } catch (e) { alert("Адрес не найден. Уточните запрос."); } finally { isSearchingLocation.value = false; }
 };
 
@@ -228,17 +256,17 @@ const openAdminEdit = () => {
   activeTab.value = 'admin_edit';
 };
 
-const updateLocation = (target: string, lon: number, lat: number) => {
+const updateLocation = (target: string, lon: number, lat: number, address?: string) => {
   if (target === 'admin_edit') {
     editForm.value.location = [lon, lat];
   } else if (target === 'passenger') {
     passengerForm.value.pickupLocation = [lon, lat];
-    passengerResolvedAddress.value = "Выбрано на карте";
+    passengerResolvedAddress.value = address || "Точка на карте";
   } else if (target === 'driver' && props.office) {
     isRouteBuilt.value = false;
     emit('route-preview', null);
-    driverForm.value.routePath = [[lon, lat], [props.office.location[0], props.office.location[1]]];
-    driverResolvedAddress.value = "Выбрано на карте";
+    driverForm.value.routePath = [[lon, lat], [props.office.location[0]!, props.office.location[1]!]];
+    driverResolvedAddress.value = address || "Точка на карте";
   }
 };
 
@@ -246,7 +274,7 @@ const buildDriverRoute = async () => {
   if (driverForm.value.routePath.length < 2) return;
   isLoadingRoute.value = true;
   try {
-    const routeData = await getRoute(driverForm.value.routePath[0], driverForm.value.routePath[1]);
+    const routeData = await getRoute(driverForm.value.routePath[0]!, driverForm.value.routePath[1]!);
     driverForm.value.routePath = routeData.routePath;
     driverForm.value.estimatedDuration = routeData.durationMinutes;
     isRouteBuilt.value = true;

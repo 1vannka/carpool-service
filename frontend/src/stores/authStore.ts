@@ -22,18 +22,21 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     _saveTokens(access: string, refresh: string) {
-      this.accessToken = access;
-      this.refreshToken = refresh;
-      localStorage.setItem('access_token', access);
-      localStorage.setItem('refresh_token', refresh);
+      if (access) {
+        this.accessToken = access;
+        localStorage.setItem('access_token', access);
+      }
+      if (refresh) {
+        this.refreshToken = refresh;
+        localStorage.setItem('refresh_token', refresh);
+      }
 
       try {
-        const decoded = jwtDecode<any>(access);
+        const decoded = jwtDecode<any>(this.accessToken as string);
 
         this.userEmail = decoded.sub;
 
         const roles = decoded.roles || decoded.authorities || decoded.role;
-
         if (Array.isArray(roles) && roles.length > 0) {
           this.userRole = typeof roles[0] === 'string' ? roles[0] : roles[0].authority || null;
         } else if (typeof roles === 'string') {
@@ -58,8 +61,12 @@ export const useAuthStore = defineStore('auth', {
         const response = await axios.post('http://localhost:8080/api/auth/refresh', {
           refreshToken: this.refreshToken
         });
-        this._saveTokens(response.data.accessToken, response.data.refreshToken);
-        return this.accessToken;
+
+        const newAccess = response.data.accessToken || response.data.access_token || response.data;
+        const newRefresh = response.data.refreshToken || response.data.refresh_token || this.refreshToken;
+
+        this._saveTokens(newAccess, newRefresh);
+        return newAccess;
       } catch (error) {
         this.logout();
         throw error;
