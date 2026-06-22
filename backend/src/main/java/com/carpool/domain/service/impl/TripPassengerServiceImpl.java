@@ -11,6 +11,9 @@ import com.carpool.domain.repository.TripRepositoryPort;
 import com.carpool.domain.service.NotificationService;
 import com.carpool.domain.service.TripPassengerService;
 
+import java.util.List;
+import java.util.Optional;
+
 public class TripPassengerServiceImpl implements TripPassengerService {
 
     private final TripPassengerRepositoryPort tripPassengerRepositoryPort;
@@ -139,6 +142,19 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         }
 
         tripPassengerRepositoryPort.delete(tripId, passengerId);
+    }
+
+    @Override
+    public List<TripPassenger> getPassengersByTripId(Long tripId) {
+        tripRepositoryPort.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
+
+        return tripPassengerRepositoryPort.findAllByTripId(tripId);
+    }
+
+    @Override
+    public Optional<TripPassenger> getPassengerStatus(Long tripId, Long passengerId) {
+        return tripPassengerRepositoryPort.findByIds(tripId, passengerId);
     }
 
     private Trip validateDriverAndGetTrip(Long tripId, Long driverId) {
