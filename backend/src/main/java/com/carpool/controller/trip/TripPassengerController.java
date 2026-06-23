@@ -56,6 +56,8 @@ public class TripPassengerController {
                                 passenger.getTripId(),
                                 "Удаленный",
                                 "Пользователь",
+                                "",
+                                "",
                                 passenger.getPassengerId(),
                                 passenger.getStatus()
                         );

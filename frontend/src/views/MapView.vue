@@ -1,6 +1,20 @@
 <template>
   <div class="relative w-screen h-screen">
 
+    <Toast position="bottom-right">
+      <template #message="slotProps">
+        <div class="flex flex-col gap-1 w-full">
+          <span class="font-bold text-sm">{{ slotProps.message.summary }}</span>
+          <span class="text-sm text-gray-700">{{ slotProps.message.detail }}</span>
+
+          <div class="flex gap-2 mt-2" v-if="slotProps.message.data?.type === 'NEW_PASSENGER_REQUEST'">
+            <Button size="small" severity="success" label="Одобрить" @click="acceptPassengerFromToast(slotProps.message.data.tripId, slotProps.message.data.passengerId); closeAllToasts()" />
+            <Button size="small" severity="danger" outlined label="Отклонить" @click="rejectPassengerFromToast(slotProps.message.data.tripId, slotProps.message.data.passengerId); closeAllToasts()" />
+          </div>
+        </div>
+      </template>
+    </Toast>
+
     <div v-if="!isSelectingLocation" class="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-11/12 max-w-md transition-all">
       <div class="relative shadow-lg rounded-full overflow-hidden bg-white/90 backdrop-blur border border-gray-200 flex items-center">
         <input
@@ -68,6 +82,7 @@
       @cancel-trip="handleCancelTrip"
       @edit-trip="startEditTrip"
       @logout="logout"
+      @refresh-data="loadActiveTrip(); loadMatchingTrips(); loadActiveRideRequest();"
     />
 
     <LocationCrosshair
@@ -135,6 +150,10 @@ import type { OfficeResponse } from '../types/office';
 import type { RideRequestResponse } from '../types/ride';
 import type {TripResponse, TripDetailedResponse} from '../types/trip.ts'
 import { useRouting } from '../composables/useRouting';
+import Toast from 'primevue/toast';
+import { useToast } from 'primevue/usetoast';
+import { notificationService } from '../api/notificationService';
+import { tripPassengerService } from '../api/tripPassengerService';
 
 import MapContainer from '../components/MapContainer.vue';
 import CitySelector from '../components/CitySelector.vue';
@@ -240,8 +259,8 @@ const loadActiveTrip = async () => {
     if (activeTrip.value && activeTrip.value.routePath && activeTrip.value.routePath.length > 0) {
       currentDriverRoute.value = activeTrip.value.routePath;
       activeTripAddress.value = await reverseGeocode(
-        activeTrip.value.routePath[0]![0],
-        activeTrip.value.routePath[0]![1]
+        activeTrip.value.routePath[0]![0] as number,
+        activeTrip.value.routePath[0]![1] as number
       );
     }
   } catch (e) {
@@ -481,11 +500,61 @@ const updateDriverRequest = async (payload: { id: number, dto: any }) => {
   }
 };
 
+const closeAllToasts = () => toast.removeAllGroups();
+
+const toast = useToast();
+
+const acceptPassengerFromToast = async (tripId: number, passengerId: number) => {
+  try {
+    await tripPassengerService.approvePassenger(tripId, passengerId);
+    await loadActiveTrip();
+  } catch (e) {
+    alert('Ошибка при одобрении');
+  }
+};
+
+const rejectPassengerFromToast = async (tripId: number, passengerId: number) => {
+  try {
+    await tripPassengerService.rejectPassenger(tripId, passengerId);
+    await loadActiveTrip();
+  } catch (e) {
+    alert('Ошибка при отклонении');
+  }
+};
+
+const handleSseNotification = async (notification: any) => {
+  if (notification.type === 'NEW_PASSENGER_REQUEST') {
+    toast.add({
+      severity: 'info',
+      summary: 'Новая заявка!',
+      detail: notification.message,
+      life: 9999999,
+      data: notification
+    }as any );
+  } else {
+    const isError = notification.type.includes('REJECTED') || notification.type.includes('CANCELED');
+    toast.add({
+      severity: isError ? 'error' : 'success',
+      summary: 'Уведомление',
+      detail: notification.message,
+      life: 6000
+    });
+  }
+
+  await Promise.all([
+    loadActiveTrip(),
+    loadActiveRideRequest(),
+    loadMatchingTrips()
+  ]);
+};
+
 onMounted(async () => {
   await loadOffices();
   await loadActiveRideRequest();
   await loadMatchingTrips();
   await loadActiveTrip();
+
+  notificationService.connect(handleSseNotification);
 });
 
 const logout = () => authStore.logout();

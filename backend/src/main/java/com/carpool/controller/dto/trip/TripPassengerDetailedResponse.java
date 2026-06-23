@@ -14,6 +14,12 @@ public record TripPassengerDetailedResponse(
         @Schema(description = "Фамилия пассажира", example = "Иванов")
         String lastName,
 
+        @Schema(description = "Ник/id пользователя в telegram", example = "id12345")
+        String telegramAlias,
+
+        @Schema(description = "Ник/id пользователя в Вконтакте", example = "id12345")
+        String vkAlias,
+
         @Schema(description = "ID пассажира", example = "1")
         Long passengerId,
 

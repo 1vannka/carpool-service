@@ -25,11 +25,24 @@ public class TripPassengerWebMapper {
 
          String firstName = user.getFirstName();
          String lastName = user.getLastName();
+         String telegramAlias = "N/A";
+         String vkAlias = "N/A";
+
+         try {
+             telegramAlias = user.getTelegramAlias();
+         } catch (IllegalArgumentException e) {
+         }
+         try {
+             vkAlias = user.getVkAlias();
+         } catch (IllegalArgumentException e) {
+         }
 
          return new TripPassengerDetailedResponse(
                  domain.getTripId(),
                  firstName,
                  lastName,
+                 telegramAlias,
+                 vkAlias,
                  domain.getPassengerId(),
                  domain.getStatus()
          );

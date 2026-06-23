@@ -77,12 +77,26 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
 
         String firstName = user.getFirstName();
         String lastName = user.getLastName();
+        String telegramAlias = "N/A";
+        String vkAlias = "N/A";
+
+        try {
+            telegramAlias = user.getTelegramAlias();
+        } catch (IllegalArgumentException e) {
+        }
+        try {
+            vkAlias = user.getVkAlias();
+        } catch (IllegalArgumentException e) {
+        }
+
 
         return new TripDetailedResponse(
                 domain.getId(),
                 domain.getOfficeId(),
                 firstName,
                 lastName,
+                telegramAlias,
+                vkAlias,
                 domain.getDepartureTime(),
                 domain.getEstimatedDuration(),
                 domain.getTotalSeats(),

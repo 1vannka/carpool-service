@@ -19,6 +19,12 @@ public record TripDetailedResponse(
         @Schema(description = "Фамилия водителя", example = "Иванов")
         String driverLastName,
 
+        @Schema(description = "Ник/id пользователя в telegram", example = "id12345")
+        String telegramAlias,
+
+        @Schema(description = "Ник/id пользователя в Вконтакте", example = "id12345")
+        String vkAlias,
+
         @Schema(description = "Время отправления", example = "2026-06-20T19:00:00Z")
         OffsetDateTime departureTime,
 

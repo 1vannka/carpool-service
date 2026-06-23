@@ -28,6 +28,8 @@ export interface TripDetailedResponse {
   officeId: number;
   driverFirstName: string;
   driverLastName: string;
+  telegramAlias: string;
+  vkAlias: string;
   departureTime: string;
   estimatedDuration: number;
   totalSeats: number;
@@ -37,4 +39,26 @@ export interface TripDetailedResponse {
   carPlate: string;
   status: string;
   routePath: number[][];
+}
+
+export enum BookingStatus {
+  WAITING_APPROVAL = 'WAITING_APPROVAL',
+  CONFIRMED = 'CONFIRMED',
+  REJECTED = 'REJECTED'
+}
+
+export interface TripPassengerResponse {
+  tripId: number;
+  passengerId: number;
+  status: BookingStatus | string;
+}
+
+export interface TripPassengerDetailedResponse {
+  tripId: number;
+  firstName: string;
+  lastName: string;
+  telegramAlias: string;
+  vkAlias: string;
+  passengerId: number;
+  status: BookingStatus | string;
 }
