@@ -151,4 +151,20 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         }
         return trip;
     }
+
+    @Override
+    public void pingPassenger(Long tripId, Long passengerId, Long driverId) {
+        validateDriverAndGetTrip(tripId, driverId);
+
+        tripPassengerRepositoryPort.findByIds(tripId, passengerId)
+                .orElseThrow(() -> new IllegalArgumentException("Пассажир не найден в этой поездке"));
+
+        notificationService.sendNotification(
+                passengerId,
+                "DRIVER_ARRIVING",
+                tripId,
+                passengerId,
+                "Водитель подъезжает к вашей точке посадки"
+        );
+    }
 }

@@ -39,5 +39,9 @@ export const tripPassengerService = {
 
   async cancelMyRequest(tripId: number): Promise<void> {
     await httpClient.delete(`/trips/${tripId}/passengers/my-request`);
+  },
+
+  async pingPassenger(tripId: number, passengerId: number): Promise<void> {
+    await httpClient.post(`/trips/${tripId}/passengers/${passengerId}/ping`);
   }
 };

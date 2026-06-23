@@ -2,6 +2,7 @@ package com.carpool.controller.trip;
 
 import com.carpool.controller.dto.trip.TripPassengerDetailedResponse;
 import com.carpool.controller.dto.trip.TripPassengerResponse;
+import com.carpool.domain.model.ride.RideRequest;
 import com.carpool.domain.model.trip.TripPassenger;
 import com.carpool.domain.model.user.User;
 import org.springframework.stereotype.Component;
@@ -20,31 +21,36 @@ public class TripPassengerWebMapper {
         );
     }
 
-     public TripPassengerDetailedResponse toDetailedDto(TripPassenger domain, User user) {
-         if (domain == null) return null;
+    public TripPassengerDetailedResponse toDetailedDto(TripPassenger domain, User user, RideRequest rideRequest) {
+        if (domain == null) return null;
 
-         String firstName = user.getFirstName();
-         String lastName = user.getLastName();
-         String telegramAlias = "N/A";
-         String vkAlias = "N/A";
+        String firstName = user != null ? user.getFirstName() : "Удаленный";
+        String lastName = user != null ? user.getLastName() : "Пользователь";
+        String telegramAlias = "N/A";
+        String vkAlias = "N/A";
 
-         try {
-             telegramAlias = user.getTelegramAlias();
-         } catch (IllegalArgumentException e) {
-         }
-         try {
-             vkAlias = user.getVkAlias();
-         } catch (IllegalArgumentException e) {
-         }
+        if (user != null) {
+            try { telegramAlias = user.getTelegramAlias(); } catch (IllegalArgumentException e) {}
+            try { vkAlias = user.getVkAlias(); } catch (IllegalArgumentException e) {}
+        }
 
-         return new TripPassengerDetailedResponse(
-                 domain.getTripId(),
-                 firstName,
-                 lastName,
-                 telegramAlias,
-                 vkAlias,
-                 domain.getPassengerId(),
-                 domain.getStatus()
-         );
-     }
+        double[] pickupLocation = null;
+        if (rideRequest != null && rideRequest.getPickupLocation() != null) {
+            pickupLocation = new double[]{
+                    rideRequest.getPickupLocation().getX(),
+                    rideRequest.getPickupLocation().getY()
+            };
+        }
+
+        return new TripPassengerDetailedResponse(
+                domain.getTripId(),
+                firstName,
+                lastName,
+                telegramAlias,
+                vkAlias,
+                domain.getPassengerId(),
+                domain.getStatus(),
+                pickupLocation
+        );
+    }
 }

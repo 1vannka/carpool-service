@@ -61,4 +61,5 @@ export interface TripPassengerDetailedResponse {
   vkAlias: string;
   passengerId: number;
   status: BookingStatus | string;
+  pickupLocation: number[];
 }

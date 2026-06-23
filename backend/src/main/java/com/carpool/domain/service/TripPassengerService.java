@@ -12,4 +12,5 @@ public interface TripPassengerService {
     void cancelPassengerRequest(Long tripId, Long passengerId);
     List<TripPassenger> getPassengersByTripId(Long tripId);
     Optional<TripPassenger> getPassengerStatus(Long tripId, Long passengerId);
+    void pingPassenger(Long tripId, Long passengerId, Long driverId);
 }

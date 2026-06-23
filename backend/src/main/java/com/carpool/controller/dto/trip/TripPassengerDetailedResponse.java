@@ -24,6 +24,9 @@ public record TripPassengerDetailedResponse(
         Long passengerId,
 
         @Schema(description = "Статус", example = "WAITING_APPROVAL")
-        BookingStatus status
+        BookingStatus status,
+
+        @Schema(description = "Точка посадки", example = "[40.0, 50.0]")
+        double[] pickupLocation
 ) {
 }

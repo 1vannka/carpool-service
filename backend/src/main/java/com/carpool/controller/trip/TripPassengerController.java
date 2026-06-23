@@ -3,6 +3,7 @@ package com.carpool.controller.trip;
 import com.carpool.controller.dto.trip.TripPassengerDetailedResponse;
 import com.carpool.controller.dto.trip.TripPassengerResponse;
 import com.carpool.domain.model.trip.TripPassenger;
+import com.carpool.domain.service.RideRequestService;
 import com.carpool.domain.service.TripPassengerService;
 import com.carpool.domain.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,11 +29,14 @@ public class TripPassengerController {
     private final TripPassengerService tripPassengerService;
     private final TripPassengerWebMapper webMapper;
     private final UserService userService;
+    private final RideRequestService rideRequestService;
 
-    public TripPassengerController(TripPassengerService tripPassengerService, TripPassengerWebMapper webMapper, UserService userService) {
+    public TripPassengerController(TripPassengerService tripPassengerService, TripPassengerWebMapper webMapper, UserService userService,
+                                   RideRequestService rideRequestService) {
         this.tripPassengerService = tripPassengerService;
         this.webMapper = webMapper;
         this.userService = userService;
+        this.rideRequestService = rideRequestService;
     }
 
     @GetMapping("/passengers")
@@ -50,7 +54,7 @@ public class TripPassengerController {
         List<TripPassengerDetailedResponse> response = domainPassengers.stream()
                 .map(passenger -> {
                     try {
-                        return webMapper.toDetailedDto(passenger, userService.getUserProfile(passenger.getPassengerId()));
+                        return webMapper.toDetailedDto(passenger, userService.getUserProfile(passenger.getPassengerId()), rideRequestService.getActiveRequest(passenger.getPassengerId()).orElse(null));
                     } catch (Exception e) {
                         return new TripPassengerDetailedResponse(
                                 passenger.getTripId(),
@@ -59,7 +63,8 @@ public class TripPassengerController {
                                 "",
                                 "",
                                 passenger.getPassengerId(),
-                                passenger.getStatus()
+                                passenger.getStatus(),
+                                null
                         );
                     }
                 })
@@ -177,6 +182,27 @@ public class TripPassengerController {
 
         Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
         tripPassengerService.cancelPassengerRequest(tripId, passengerId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/passengers/{passengerId}/ping")
+    @Operation(summary = "Уведомить пассажира о прибытии", description = "Водитель отправляет уведомление пассажиру о том, что машина подъезжает")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Пассажир успешно уведомлен"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Вы не водитель этой поездки",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"У вас нет прав на управление пассажирами этой поездки\"}"))),
+            @ApiResponse(responseCode = "404", description = "Поездка или заявка пассажира не найдена",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка пассажира не найдена\"}")))
+    })
+    public ResponseEntity<Void> pingPassenger(
+            @PathVariable Long tripId,
+            @PathVariable Long passengerId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long driverId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
+        tripPassengerService.pingPassenger(tripId, passengerId, driverId);
 
         return ResponseEntity.noContent().build();
     }

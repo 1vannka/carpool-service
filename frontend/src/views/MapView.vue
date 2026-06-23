@@ -531,6 +531,13 @@ const handleSseNotification = async (notification: any) => {
       life: 9999999,
       data: notification
     }as any );
+  } else if (notification.type === 'DRIVER_ARRIVING') {
+    toast.add({
+      severity: 'warn',
+      summary: 'Вас ожидают!',
+      detail: notification.message,
+      life: 9999999
+    } as any);
   } else {
     const isError = notification.type.includes('REJECTED') || notification.type.includes('CANCELED');
     toast.add({

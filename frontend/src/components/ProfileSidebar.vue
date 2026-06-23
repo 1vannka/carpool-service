@@ -204,7 +204,20 @@
           <div v-if="approvedPassengers.length > 0">
             <div class="text-[10px] text-gray-500 font-bold mb-1 uppercase tracking-wider">С вами едут</div>
             <div v-for="p in approvedPassengers" :key="p.passengerId" class="flex flex-col bg-white p-2 rounded border border-emerald-200 shadow-sm mb-1">
-              <div class="text-sm font-bold text-gray-800 mb-1"><i class="pi pi-user text-emerald-500 mr-1 text-xs"></i> {{ p.firstName }} {{ p.lastName }}</div>
+
+              <div class="flex justify-between items-start mb-1">
+                <div class="text-sm font-bold text-gray-800">
+                  <i class="pi pi-user text-emerald-500 mr-1 text-xs"></i> {{ p.firstName }} {{ p.lastName }}
+                </div>
+                <Button
+                  icon="pi pi-bell"
+                  severity="warning" text rounded size="small"
+                  class="w-6 h-6 p-0"
+                  title="Уведомить, что подъезжаю"
+                  @click="handlePingPassenger(p.passengerId)"
+                />
+              </div>
+
               <div class="flex gap-3">
                 <a v-if="p.telegramAlias" :href="'https://t.me/' + p.telegramAlias.replace('@', '')" target="_blank" class="text-blue-500 text-xs flex items-center gap-1 hover:underline"><i class="pi pi-telegram"></i> Telegram</a>
                 <a v-if="p.vkAlias" :href="p.vkAlias.startsWith('http') ? p.vkAlias : 'https://vk.com/' + p.vkAlias" target="_blank" class="text-blue-700 text-xs flex items-center gap-1 hover:underline"><i class="pi pi-comments"></i> ВКонтакте</a>
@@ -298,7 +311,7 @@ const loadRequestStatuses = async () => {
     try {
       const res = await tripPassengerService.getMyStatus(trip.id);
       if (res) statuses[trip.id] = res.status;
-    } catch (e) {
+    } catch (e) {  }
   }
   requestStatuses.value = statuses;
 };
@@ -404,6 +417,17 @@ const saveProfile = async () => {
     isSaving.value = false;
   }
 };
+
+const handlePingPassenger = async (passengerId: number) => {
+  if (!props.activeTrip) return;
+  try {
+    await tripPassengerService.pingPassenger(props.activeTrip.id, passengerId);
+    alert('Уведомление отправлено!');
+  } catch (e: any) {
+    alert(e.response?.data?.error || 'Ошибка при отправке уведомления');
+  }
+};
+
 </script>
 
 <style scoped>
