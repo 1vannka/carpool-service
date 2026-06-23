@@ -70,7 +70,8 @@ public class SseNotificationServiceImpl implements NotificationService, SseSubsc
             connections.forEach((connectionId, emitter) -> {
                 try {
                     emitter.send(SseEmitter.event().name("PING").data("keep-alive"));
-                } catch (IOException e) {
+                } catch (Exception e) {
+                    emitter.completeWithError(e);
                     removeEmitter(userId, connectionId);
                 }
             });
