@@ -1,9 +1,11 @@
 package com.carpool.controller.trip;
 
 import com.carpool.controller.dto.trip.TripCreateRequest;
+import com.carpool.controller.dto.trip.TripDetailedResponse;
 import com.carpool.controller.dto.trip.TripResponse;
 import com.carpool.controller.dto.trip.TripUpdateRequest;
 import com.carpool.domain.model.trip.Trip;
+import com.carpool.domain.model.user.User;
 import com.carpool.domain.service.TripService;
 import com.carpool.domain.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -135,14 +137,24 @@ public class TripController {
             @ApiResponse(responseCode = "401", description = "Не авторизован",
                     content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}")))
     })
-    public ResponseEntity<List<TripResponse>> getMatchingTrips(
+    public ResponseEntity<List<TripDetailedResponse>> getMatchingTrips(
             @AuthenticationPrincipal UserDetails userDetails) {
 
         Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
         List<Trip> matchingTrips = tripService.findMatchingTripsForPassenger(passengerId);
 
-        List<TripResponse> response = matchingTrips.stream()
-                .map(tripWebMapper::toDto)
+        List<TripDetailedResponse> response = matchingTrips.stream()
+                .map(trip -> {
+                    User driver = null;
+                    try {
+                        driver = userService.getUserProfile(trip.getDriverId());
+                    } catch (IllegalArgumentException e) {
+                        driver = new User();
+                        driver.setFirstName("Удаленный");
+                        driver.setLastName("Пользователь");
+                    }
+                    return tripWebMapper.toDetailedDto(trip, driver);
+                })
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(response);

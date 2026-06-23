@@ -11,6 +11,9 @@ import com.carpool.domain.repository.TripRepositoryPort;
 import com.carpool.domain.service.NotificationService;
 import com.carpool.domain.service.TripPassengerService;
 
+import java.util.List;
+import java.util.Optional;
+
 public class TripPassengerServiceImpl implements TripPassengerService {
 
     private final TripPassengerRepositoryPort tripPassengerRepositoryPort;
@@ -53,10 +56,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         TripPassenger request = new TripPassenger(tripId, passengerId, BookingStatus.WAITING_APPROVAL);
         TripPassenger savedRequest = tripPassengerRepositoryPort.save(request);
 
-        notificationService.sendNotification(
-                trip.getDriverId(),
-                "У вас новая заявка на присоединение к поездке!"
-        );
+        notificationService.sendNotification(trip.getDriverId(), "NEW_PASSENGER_REQUEST", tripId, passengerId, "У вас новая заявка на присоединение к поездке");
 
         return savedRequest;
     }
@@ -82,10 +82,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         trip.setAvailableSeats(trip.getAvailableSeats() - 1);
         tripRepositoryPort.save(trip);
 
-        notificationService.sendNotification(
-                passengerId,
-                "Водитель одобрил вашу заявку на поездку"
-        );
+        notificationService.sendNotification(passengerId, "PASSENGER_APPROVED", tripId, passengerId, "Водитель одобрил вашу заявку на поездку");
 
         return savedRequest;
     }
@@ -104,10 +101,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         request.setStatus(BookingStatus.REJECTED);
         tripPassengerRepositoryPort.save(request);
 
-        notificationService.sendNotification(
-                passengerId,
-                "Водитель отклонил вашу заявку"
-        );
+        notificationService.sendNotification(passengerId, "PASSENGER_REJECTED", tripId, passengerId, "Водитель отклонил вашу заявку");
     }
 
     @Override
@@ -126,19 +120,26 @@ public class TripPassengerServiceImpl implements TripPassengerService {
             trip.setAvailableSeats(trip.getAvailableSeats() + 1);
             tripRepositoryPort.save(trip);
 
-            notificationService.sendNotification(
-                    trip.getDriverId(),
-                    "Пассажир отменил поездку. У вас освободилось 1 место"
-            );
+            notificationService.sendNotification(trip.getDriverId(), "PASSENGER_LEFT_TRIP", tripId, passengerId, "Пассажир отменил поездку. У вас освободилось 1 место");
         }
         else if (request.getStatus() == BookingStatus.WAITING_APPROVAL) {
-            notificationService.sendNotification(
-                    trip.getDriverId(),
-                    "Пассажир отменил свою заявку"
-            );
+            notificationService.sendNotification(trip.getDriverId(), "PASSENGER_CANCELED_REQUEST", tripId, passengerId, "Пассажир отменил свою заявку");
         }
 
         tripPassengerRepositoryPort.delete(tripId, passengerId);
+    }
+
+    @Override
+    public List<TripPassenger> getPassengersByTripId(Long tripId) {
+        tripRepositoryPort.findById(tripId)
+                .orElseThrow(() -> new IllegalArgumentException("Поездка не найдена"));
+
+        return tripPassengerRepositoryPort.findAllByTripId(tripId);
+    }
+
+    @Override
+    public Optional<TripPassenger> getPassengerStatus(Long tripId, Long passengerId) {
+        return tripPassengerRepositoryPort.findByIds(tripId, passengerId);
     }
 
     private Trip validateDriverAndGetTrip(Long tripId, Long driverId) {
@@ -149,5 +150,21 @@ public class TripPassengerServiceImpl implements TripPassengerService {
             throw new SecurityException("У вас нет прав на управление пассажирами этой поездки");
         }
         return trip;
+    }
+
+    @Override
+    public void pingPassenger(Long tripId, Long passengerId, Long driverId) {
+        validateDriverAndGetTrip(tripId, driverId);
+
+        tripPassengerRepositoryPort.findByIds(tripId, passengerId)
+                .orElseThrow(() -> new IllegalArgumentException("Пассажир не найден в этой поездке"));
+
+        notificationService.sendNotification(
+                passengerId,
+                "DRIVER_ARRIVING",
+                tripId,
+                passengerId,
+                "Водитель подъезжает к вашей точке посадки"
+        );
     }
 }

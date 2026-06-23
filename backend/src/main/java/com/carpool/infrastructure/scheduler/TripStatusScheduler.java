@@ -48,11 +48,11 @@ public class TripStatusScheduler {
         int expiredRequests = jpaRideRequestRepository.updateExpiredRequests(now);
 
         expiredApprovalPassengerIds.forEach(id ->
-                notificationService.sendNotification(id, "Время выезда наступило. Ваша заявка отклонена автоматически")
+                notificationService.sendNotification(id, "EXPIRED_APPROVAL", null, id, "Время выезда наступило. Ваша заявка отклонена автоматически")
         );
 
         expiredRequestPassengerIds.forEach(id ->
-                notificationService.sendNotification(id, "Время ожидания истекло. Заявка переведена в архив")
+                notificationService.sendNotification(id, "EXPIRED_REQUEST", null, id, "Время ожидания истекло. Заявка переведена в архив")
         );
 
         if (startedTrips > 0 || completedTrips > 0 || rejectedPassengers > 0 || expiredRequests > 0) {

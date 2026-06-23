@@ -74,9 +74,7 @@ public class AuthServiceImpl implements AuthService {
             throw new IllegalArgumentException("Невалидный Refresh Token");
         }
 
-        redisTokenService.deleteRefreshToken(user.getId(), refreshToken);
-
-        return generateTokenPair(user);
+        return new TokenPair(generateAccesToken(user), refreshToken);
     }
 
     @Override
@@ -109,5 +107,11 @@ public class AuthServiceImpl implements AuthService {
         );
 
         return new TokenPair(accessToken, refreshToken);
+    }
+
+    private String generateAccesToken(User user){
+        UserDetailsImpl userDetails = new UserDetailsImpl(user);
+
+        return jwtService.generateAccessToken(userDetails, user.getId());
     }
 }

@@ -61,10 +61,7 @@ public class TripServiceImpl implements TripService {
         );
 
         for (RideRequest request : matchingRequests) {
-            notificationService.sendNotification(
-                    request.getPassengerId(),
-                    "Найден водитель по вашему маршруту"
-            );
+            notificationService.sendNotification(request.getPassengerId(), "NEW_MATCH_FOUND", savedTrip.getId(), request.getPassengerId(), "Найден водитель по вашему маршруту");
         }
 
         return savedTrip;
@@ -118,10 +115,7 @@ public class TripServiceImpl implements TripService {
 
         List<TripPassenger> passengers = tripPassengerRepositoryPort.findAllByTripId(tripId);
         for (TripPassenger passenger : passengers) {
-            notificationService.sendNotification(
-                    passenger.getPassengerId(),
-                    "Водитель отменил поездку"
-            );
+            notificationService.sendNotification(passenger.getPassengerId(), "TRIP_CANCELED", tripId, passenger.getPassengerId(), "Водитель отменил поездку");
         }
 
         return savedTrip;

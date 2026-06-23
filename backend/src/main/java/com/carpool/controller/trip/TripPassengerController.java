@@ -1,7 +1,9 @@
 package com.carpool.controller.trip;
 
+import com.carpool.controller.dto.trip.TripPassengerDetailedResponse;
 import com.carpool.controller.dto.trip.TripPassengerResponse;
 import com.carpool.domain.model.trip.TripPassenger;
+import com.carpool.domain.service.RideRequestService;
 import com.carpool.domain.service.TripPassengerService;
 import com.carpool.domain.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,6 +18,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequestMapping("/api/trips/{tripId}")
 @Tag(name = "Trip Passengers", description = "Бронирование мест и управление пассажирами")
@@ -24,11 +29,69 @@ public class TripPassengerController {
     private final TripPassengerService tripPassengerService;
     private final TripPassengerWebMapper webMapper;
     private final UserService userService;
+    private final RideRequestService rideRequestService;
 
-    public TripPassengerController(TripPassengerService tripPassengerService, TripPassengerWebMapper webMapper, UserService userService) {
+    public TripPassengerController(TripPassengerService tripPassengerService, TripPassengerWebMapper webMapper, UserService userService,
+                                   RideRequestService rideRequestService) {
         this.tripPassengerService = tripPassengerService;
         this.webMapper = webMapper;
         this.userService = userService;
+        this.rideRequestService = rideRequestService;
+    }
+
+    @GetMapping("/passengers")
+    @Operation(summary = "Получить список пассажиров поездки", description = "Возвращает всех пассажиров (активных и ожидающих) для указанной поездки. Доступно водителю.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Список пассажиров успешно получен"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "404", description = "Поездка не найдена",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Поездка не найдена\"}")))
+    })
+    public ResponseEntity<List<TripPassengerDetailedResponse>> getTripPassengers(@PathVariable Long tripId) {
+        List<TripPassenger> domainPassengers = tripPassengerService.getPassengersByTripId(tripId);
+
+        List<TripPassengerDetailedResponse> response = domainPassengers.stream()
+                .map(passenger -> {
+                    try {
+                        return webMapper.toDetailedDto(passenger, userService.getUserProfile(passenger.getPassengerId()), rideRequestService.getActiveRequest(passenger.getPassengerId()).orElse(null));
+                    } catch (Exception e) {
+                        return new TripPassengerDetailedResponse(
+                                passenger.getTripId(),
+                                "Удаленный",
+                                "Пользователь",
+                                "",
+                                "",
+                                passenger.getPassengerId(),
+                                passenger.getStatus(),
+                                null
+                        );
+                    }
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/my-status")
+    @Operation(summary = "Получить статус моей заявки", description = "Проверяет статус бронирования текущего авторизованного пользователя в этой поездке")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Статус успешно получен"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "404", description = "Заявка на эту поездку отсутствует",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка не найдена\"}")))
+    })
+    public ResponseEntity<TripPassengerResponse> getMyStatus(
+            @PathVariable Long tripId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
+
+        return tripPassengerService.getPassengerStatus(tripId, passengerId)
+                .map(webMapper::toDto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping("/join")
@@ -119,6 +182,27 @@ public class TripPassengerController {
 
         Long passengerId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
         tripPassengerService.cancelPassengerRequest(tripId, passengerId);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/passengers/{passengerId}/ping")
+    @Operation(summary = "Уведомить пассажира о прибытии", description = "Водитель отправляет уведомление пассажиру о том, что машина подъезжает")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Пассажир успешно уведомлен"),
+            @ApiResponse(responseCode = "401", description = "Не авторизован",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Не авторизован\"}"))),
+            @ApiResponse(responseCode = "403", description = "Вы не водитель этой поездки",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"У вас нет прав на управление пассажирами этой поездки\"}"))),
+            @ApiResponse(responseCode = "404", description = "Поездка или заявка пассажира не найдена",
+                    content = @Content(mediaType = "application/json", schema = @Schema(example = "{\"error\": \"Заявка пассажира не найдена\"}")))
+    })
+    public ResponseEntity<Void> pingPassenger(
+            @PathVariable Long tripId,
+            @PathVariable Long passengerId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long driverId = userService.getUserProfileByEmail(userDetails.getUsername()).getId();
+        tripPassengerService.pingPassenger(tripId, passengerId, driverId);
 
         return ResponseEntity.noContent().build();
     }
