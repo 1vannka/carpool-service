@@ -258,6 +258,7 @@ const props = defineProps<{
   activeTrip: TripResponse | null;
   tripAddress: string;
   matchingTrips?: TripDetailedResponse[];
+  tripPassengers: TripPassengerDetailedResponse[];
 }>();
 
 const emit = defineEmits([
@@ -280,15 +281,13 @@ const editForm = ref({ telegramAlias: '', vkAlias: '' });
 const requestStatuses = ref<Record<number, string>>({});
 const expandedTrips = ref<Set<number>>(new Set());
 
-const tripPassengers = ref<TripPassengerDetailedResponse[]>([]);
-
 const confirmedTrip = computed(() => {
   if (!props.matchingTrips) return null;
   return props.matchingTrips.find(t => requestStatuses.value[t.id] === BookingStatus.CONFIRMED);
 });
 
-const pendingPassengers = computed(() => tripPassengers.value.filter(p => p.status === BookingStatus.WAITING_APPROVAL));
-const approvedPassengers = computed(() => tripPassengers.value.filter(p => p.status === BookingStatus.CONFIRMED));
+const pendingPassengers = computed(() => props.tripPassengers?.filter(p => p.status === BookingStatus.WAITING_APPROVAL) || []);
+const approvedPassengers = computed(() => props.tripPassengers?.filter(p => p.status === BookingStatus.CONFIRMED) || []);
 
 const fetchProfile = async () => {
   isLoading.value = true;
@@ -316,33 +315,16 @@ const loadRequestStatuses = async () => {
   requestStatuses.value = statuses;
 };
 
-const loadTripPassengers = async () => {
-  if (!props.activeTrip) {
-    tripPassengers.value = [];
-    return;
-  }
-  try {
-    tripPassengers.value = await tripPassengerService.getTripPassengers(props.activeTrip.id);
-  } catch (e) {
-    tripPassengers.value = [];
-  }
-};
-
 watch(() => props.visible, (newVal) => {
   if (newVal) {
     isEditing.value = false;
     fetchProfile();
     loadRequestStatuses();
-    loadTripPassengers();
   }
 });
 
 watch(() => props.matchingTrips, () => {
   if (props.visible) loadRequestStatuses();
-}, { deep: true });
-
-watch(() => props.activeTrip, () => {
-  if (props.visible) loadTripPassengers();
 }, { deep: true });
 
 const toggleTripDetails = (tripId: number) => {
@@ -375,7 +357,6 @@ const handleApprovePassenger = async (passengerId: number) => {
   if (!props.activeTrip) return;
   try {
     await tripPassengerService.approvePassenger(props.activeTrip.id, passengerId);
-    await loadTripPassengers();
     emit('refresh-data');
   } catch (e: any) {
     alert(e.response?.data?.error || 'Ошибка при одобрении');
@@ -386,7 +367,7 @@ const handleRejectPassenger = async (passengerId: number) => {
   if (!props.activeTrip) return;
   try {
     await tripPassengerService.rejectPassenger(props.activeTrip.id, passengerId);
-    await loadTripPassengers();
+    emit('refresh-data');
   } catch (e: any) {
     alert(e.response?.data?.error || 'Ошибка при отклонении');
   }
@@ -422,12 +403,10 @@ const handlePingPassenger = async (passengerId: number) => {
   if (!props.activeTrip) return;
   try {
     await tripPassengerService.pingPassenger(props.activeTrip.id, passengerId);
-    alert('Уведомление отправлено!');
   } catch (e: any) {
     alert(e.response?.data?.error || 'Ошибка при отправке уведомления');
   }
 };
-
 </script>
 
 <style scoped>

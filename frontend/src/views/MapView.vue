@@ -49,7 +49,7 @@
       :driverRoute="currentDriverRoute"
       :searchMarker="globalSearchMarker"
       :passengerMarker="activeRideRequest ? { lat: activeRideRequest.pickupLocation[1]!, lng: activeRideRequest.pickupLocation[0]! } : null"
-      @office-click="openOfficeDialog"
+      :driverPassengers="driverPassengerMapMarkers"  @office-click="openOfficeDialog"
     />
 
     <CitySelector
@@ -77,6 +77,7 @@
       :activeTrip="activeTrip"
       :tripAddress="activeTripAddress"
       :matchingTrips="matchingTrips"
+      :tripPassengers="activeDriverPassengers"
       @preview-matched-route="(route) => currentDriverRoute = route"
       @cancel-ride="handleCancelRideRequest"
       @cancel-trip="handleCancelTrip"
@@ -148,7 +149,7 @@ import { rideRequestService } from '../api/rideRequestService';
 import {tripService} from '../api/tripService.ts'
 import type { OfficeResponse } from '../types/office';
 import type { RideRequestResponse } from '../types/ride';
-import type {TripResponse, TripDetailedResponse} from '../types/trip.ts'
+import type {TripResponse, TripDetailedResponse, TripPassengerDetailedResponse} from '../types/trip.ts'
 import { useRouting } from '../composables/useRouting';
 import Toast from 'primevue/toast';
 import { useToast } from 'primevue/usetoast';
@@ -211,6 +212,31 @@ const matchingTrips = ref<TripDetailedResponse[]>([]);
 
 const adminCreateForm = ref({ name: '', city: '', address: '', location: [] as number[] });
 
+const activeDriverPassengers = ref<TripPassengerDetailedResponse[]>([]);
+
+const loadActiveTripPassengers = async () => {
+  if (!activeTrip.value) {
+    activeDriverPassengers.value = [];
+    return;
+  }
+  try {
+    activeDriverPassengers.value = await tripPassengerService.getTripPassengers(activeTrip.value.id);
+  } catch (error) {
+    console.error("Ошибка загрузки пассажиров:", error);
+    activeDriverPassengers.value = [];
+  }
+};
+
+const driverPassengerMapMarkers = computed(() => {
+  return activeDriverPassengers.value.map(p => ({
+    id: p.passengerId,
+    lat: p.pickupLocation[1],
+    lng: p.pickupLocation[0],
+    name: `${p.firstName} ${p.lastName}`,
+    status: p.status
+  }));
+});
+
 const loadOffices = async () => {
   allOffices.value = await officeService.getOffices();
   const uniqueCitiesMap = new Map();
@@ -263,8 +289,12 @@ const loadActiveTrip = async () => {
         activeTrip.value.routePath[0]![1] as number
       );
     }
+
+    await loadActiveTripPassengers();
   } catch (e) {
     console.error("Поездок не найдено или ошибка загрузки");
+    activeTrip.value = null;
+    activeDriverPassengers.value = [];
   }
 };
 
@@ -274,7 +304,6 @@ const handleCancelTrip = async (id: number) => {
     await tripService.cancelTrip(id);
     currentDriverRoute.value = null;
     await loadActiveTrip();
-    alert('Поездка отменена');
   } catch (e) {
     alert('Ошибка при отмене поездки');
   }
@@ -421,7 +450,6 @@ const handleCancelRideRequest = async (id: number) => {
   try {
     await rideRequestService.cancelRideRequest(id);
     await loadActiveRideRequest();
-    alert('Заявка успешно отменена');
   } catch (e) {
     alert('Ошибка при отмене заявки');
   }

@@ -23,6 +23,7 @@ const props = defineProps<{
   driverRoute?: number[][] | null;
   searchMarker?: { lat: number, lng: number } | null;
   passengerMarker?: { lat: number, lng: number } | null;
+  driverPassengers?: { id: number, lat: number, lng: number, name: string, status: string }[] | null;
 }>();
 
 const emit = defineEmits(['office-click']);
@@ -32,6 +33,7 @@ const markers: L.Marker[] = [];
 const routeLayer = shallowRef<L.Polyline | null>(null);
 const searchMarkerLayer = shallowRef<L.Marker | null>(null);
 const passengerMarkerLayer = shallowRef<L.CircleMarker | null>(null);
+const driverPassengersLayers: L.CircleMarker[] = [];
 
 const drawMarkers = () => {
   markers.forEach(m => m.remove());
@@ -66,6 +68,28 @@ const drawPassengerMarker = (newLoc: { lat: number, lng: number } | null | undef
   }
 };
 
+const drawDriverPassengers = (passengers: any[] | null | undefined) => {
+  if (!map.value) return;
+
+  driverPassengersLayers.forEach(layer => map.value!.removeLayer(layer));
+  driverPassengersLayers.length = 0;
+
+  if (passengers && passengers.length > 0) {
+    passengers.forEach(p => {
+      const isApproved = p.status === 'CONFIRMED';
+      const marker = L.circleMarker([p.lat, p.lng], {
+        radius: 8,
+        color: isApproved ? '#059669' : '#d97706',
+        fillColor: isApproved ? '#10b981' : '#fcd34d',
+        fillOpacity: 0.9, weight: 3
+      }).addTo(map.value!);
+
+      marker.bindPopup(`<b>${isApproved ? 'Попутчик:' : 'Заявка от:'}</b> ${p.name}`);
+      driverPassengersLayers.push(marker);
+    });
+  }
+};
+
 onMounted(() => {
   const startLat = props.center?.lat || 55.751244;
   const startLng = props.center?.lng || 37.618423;
@@ -78,6 +102,7 @@ onMounted(() => {
   drawMarkers();
   drawRoute(props.driverRoute);
   drawPassengerMarker(props.passengerMarker);
+  drawDriverPassengers(props.driverPassengers);
 });
 
 onUnmounted(() => { if (map.value) map.value.remove(); });
@@ -89,9 +114,9 @@ watch(() => props.center, (newCenter) => {
 });
 
 watch(() => props.offices, () => drawMarkers(), { deep: true, immediate: true });
-
 watch(() => props.driverRoute, (newRoute) => drawRoute(newRoute), { deep: true, immediate: true });
 watch(() => props.passengerMarker, (newLoc) => drawPassengerMarker(newLoc), { deep: true, immediate: true });
+watch(() => props.driverPassengers, (newPassengers) => drawDriverPassengers(newPassengers), { deep: true, immediate: true });
 
 watch(() => props.searchMarker, (newLoc) => {
   if (!map.value) return;
