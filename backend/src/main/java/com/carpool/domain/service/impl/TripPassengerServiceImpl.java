@@ -56,10 +56,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         TripPassenger request = new TripPassenger(tripId, passengerId, BookingStatus.WAITING_APPROVAL);
         TripPassenger savedRequest = tripPassengerRepositoryPort.save(request);
 
-        notificationService.sendNotification(
-                trip.getDriverId(),
-                "У вас новая заявка на присоединение к поездке!"
-        );
+        notificationService.sendNotification(trip.getDriverId(), "NEW_PASSENGER_REQUEST", tripId, passengerId, "У вас новая заявка на присоединение к поездке");
 
         return savedRequest;
     }
@@ -85,10 +82,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         trip.setAvailableSeats(trip.getAvailableSeats() - 1);
         tripRepositoryPort.save(trip);
 
-        notificationService.sendNotification(
-                passengerId,
-                "Водитель одобрил вашу заявку на поездку"
-        );
+        notificationService.sendNotification(passengerId, "PASSENGER_APPROVED", tripId, passengerId, "Водитель одобрил вашу заявку на поездку");
 
         return savedRequest;
     }
@@ -107,10 +101,7 @@ public class TripPassengerServiceImpl implements TripPassengerService {
         request.setStatus(BookingStatus.REJECTED);
         tripPassengerRepositoryPort.save(request);
 
-        notificationService.sendNotification(
-                passengerId,
-                "Водитель отклонил вашу заявку"
-        );
+        notificationService.sendNotification(passengerId, "PASSENGER_REJECTED", tripId, passengerId, "Водитель отклонил вашу заявку");
     }
 
     @Override
@@ -129,16 +120,10 @@ public class TripPassengerServiceImpl implements TripPassengerService {
             trip.setAvailableSeats(trip.getAvailableSeats() + 1);
             tripRepositoryPort.save(trip);
 
-            notificationService.sendNotification(
-                    trip.getDriverId(),
-                    "Пассажир отменил поездку. У вас освободилось 1 место"
-            );
+            notificationService.sendNotification(trip.getDriverId(), "PASSENGER_LEFT_TRIP", tripId, passengerId, "Пассажир отменил поездку. У вас освободилось 1 место");
         }
         else if (request.getStatus() == BookingStatus.WAITING_APPROVAL) {
-            notificationService.sendNotification(
-                    trip.getDriverId(),
-                    "Пассажир отменил свою заявку"
-            );
+            notificationService.sendNotification(trip.getDriverId(), "PASSENGER_CANCELED_REQUEST", tripId, passengerId, "Пассажир отменил свою заявку");
         }
 
         tripPassengerRepositoryPort.delete(tripId, passengerId);

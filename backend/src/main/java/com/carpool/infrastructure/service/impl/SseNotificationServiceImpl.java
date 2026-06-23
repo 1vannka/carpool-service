@@ -2,6 +2,7 @@ package com.carpool.infrastructure.service.impl;
 
 import com.carpool.domain.service.NotificationService;
 import com.carpool.infrastructure.service.SseSubscriptionManager;
+import com.carpool.domain.model.notification.NotificationPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
@@ -47,12 +48,14 @@ public class SseNotificationServiceImpl implements NotificationService, SseSubsc
     }
 
     @Override
-    public void sendNotification(Long userId, String message) {
+    public void sendNotification(Long userId, String type, Long tripId, Long passengerId, String message) {
         ConcurrentMap<String, SseEmitter> connections = userEmitters.get(userId);
         if (connections != null) {
+            NotificationPayload payload = new NotificationPayload(type, tripId, passengerId, message);
+
             connections.forEach((connectionId, emitter) -> {
                 try {
-                    emitter.send(SseEmitter.event().name("NOTIFICATION").data(message));
+                    emitter.send(SseEmitter.event().name("NOTIFICATION").data(payload));
                 } catch (IOException e) {
                     removeEmitter(userId, connectionId);
                 }
