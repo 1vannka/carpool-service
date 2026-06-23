@@ -403,6 +403,7 @@ const submitDriver = () => {
 
   const dto: TripCreateRequest = {
     ...driverForm.value,
+    officeId: driverForm.value.officeId!,
     carPlate: driverForm.value.carPlate.toUpperCase().replace(/\s/g, ''),
     departureTime: driverForm.value.departureTime ? formatInputToUtcIso(driverForm.value.departureTime) : null as any
   };

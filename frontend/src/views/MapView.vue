@@ -15,20 +15,29 @@
       </template>
     </Toast>
 
-    <div v-if="!isSelectingLocation" class="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-11/12 max-w-md transition-all">
-      <div class="relative shadow-lg rounded-full overflow-hidden bg-white/90 backdrop-blur border border-gray-200 flex items-center">
+    <div v-if="!isSelectingLocation" class="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-11/12 max-w-xl transition-all">
+      <div class="shadow-lg rounded-full bg-white/90 backdrop-blur border border-gray-200 flex items-center pl-6 pr-1.5 py-1.5">
+
         <input
           type="text"
           v-model="globalSearchQuery"
           placeholder="Поиск адреса на карте..."
-          class="w-full py-3 pl-6 pr-12 outline-none bg-transparent text-gray-700 font-medium"
+          class="flex-1 w-full outline-none bg-transparent text-gray-700 font-medium truncate min-w-0 mr-3"
           @keyup.enter="handleGlobalMapSearch"
         />
+
+        <div class="hidden sm:flex items-center gap-2 px-4 border-l border-gray-200 shrink-0 select-none h-6 mr-1">
+          <Checkbox v-model="searchInCityOnly" :binary="true" inputId="cityOnlyCheckbox" />
+          <label for="cityOnlyCheckbox" class="text-xs text-gray-500 font-medium cursor-pointer whitespace-nowrap hover:text-gray-700 transition-colors pt-0.5">
+            Внутри города
+          </label>
+        </div>
+
         <Button
           v-if="!globalSearchMarker"
           icon="pi pi-search"
           text rounded
-          class="absolute right-1 text-gray-500 hover:text-purple-600"
+          class="shrink-0 text-gray-500 hover:text-purple-600 w-10 h-10 p-0"
           :loading="isGlobalSearching"
           @click="handleGlobalMapSearch"
         />
@@ -36,7 +45,7 @@
           v-else
           icon="pi pi-times"
           text rounded severity="danger"
-          class="absolute right-1"
+          class="shrink-0 w-10 h-10 p-0"
           @click="clearGlobalSearch"
         />
       </div>
@@ -163,6 +172,7 @@ import OfficeDialog from '../components/OfficeActionDialog.vue';
 import ProfileSidebar from '../components/ProfileSidebar.vue';
 import Button from 'primevue/button';
 import Dialog from 'primevue/dialog';
+import Checkbox from 'primevue/checkbox';
 
 const authStore = useAuthStore();
 const { geocodeAddress, reverseGeocode } = useRouting();
@@ -214,6 +224,8 @@ const adminCreateForm = ref({ name: '', city: '', address: '', location: [] as n
 
 const activeDriverPassengers = ref<TripPassengerDetailedResponse[]>([]);
 
+const searchInCityOnly = ref(true);
+
 const loadActiveTripPassengers = async () => {
   if (!activeTrip.value) {
     activeDriverPassengers.value = [];
@@ -230,8 +242,8 @@ const loadActiveTripPassengers = async () => {
 const driverPassengerMapMarkers = computed(() => {
   return activeDriverPassengers.value.map(p => ({
     id: p.passengerId,
-    lat: p.pickupLocation[1],
-    lng: p.pickupLocation[0],
+    lat: p.pickupLocation[1]!,
+    lng: p.pickupLocation[0]!,
     name: `${p.firstName} ${p.lastName}`,
     status: p.status
   }));
@@ -266,9 +278,11 @@ const handleGlobalMapSearch = async () => {
   isGlobalSearching.value = true;
   try {
     let query = globalSearchQuery.value;
-    if (selectedCity.value && !query.toLowerCase().includes(selectedCity.value.name.toLowerCase())) {
+
+    if (searchInCityOnly.value && selectedCity.value && !query.toLowerCase().includes(selectedCity.value.name.toLowerCase())) {
       query = `${selectedCity.value.name}, ${query}`;
     }
+
     const result = await geocodeAddress(query, selectedCity.value?.lng, selectedCity.value?.lat);
     globalSearchMarker.value = { lat: result.location[1]!, lng: result.location[0]! };
     globalSearchQuery.value = result.address;
