@@ -23,6 +23,7 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
     @Override
     public Trip toDomain(TripCreateRequest dto) {
         if (dto == null) return null;
+        LineString route = coordinatesToLineString(dto.routePath());
 
         Trip trip = new Trip();
         trip.setOfficeId(dto.officeId());
@@ -32,7 +33,8 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
         trip.setCarModel(dto.carModel());
         trip.setCarColor(dto.carColor());
         trip.setCarPlate(dto.carPlate());
-        trip.setRoutePath(coordinatesToLineString(dto.routePath()));
+        trip.setRoutePath(route);
+        trip.setStartLocation(route.getStartPoint());
 
         return trip;
     }
@@ -67,7 +69,8 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
                 domain.getCarColor(),
                 domain.getCarPlate(),
                 domain.getStatus(),
-                lineStringToCoordinates(domain.getRoutePath())
+                lineStringToCoordinates(domain.getRoutePath()),
+                pointToCoordinate(domain.getStartLocation())
         );
     }
 
@@ -105,7 +108,8 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
                 domain.getCarColor(),
                 domain.getCarPlate(),
                 domain.getStatus(),
-                lineStringToCoordinates(domain.getRoutePath())
+                lineStringToCoordinates(domain.getRoutePath()),
+                pointToCoordinate(domain.getStartLocation())
         );
     }
 
@@ -130,5 +134,10 @@ public class TripWebMapper implements RequestMapper<TripCreateRequest, Trip>, Re
             rawPath[i][1] = coordinates[i].getY();
         }
         return rawPath;
+    }
+
+    private double[] pointToCoordinate(org.locationtech.jts.geom.Point point) {
+        if (point == null) return null;
+        return new double[]{point.getX(), point.getY()};
     }
 }

@@ -26,6 +26,7 @@ public class TripMapper implements Mapper<TripEntity, Trip> {
         trip.setRoutePath(entity.getRoutePath());
         trip.setVersion(entity.getVersion());
         trip.setStatus(entity.getStatus());
+        trip.setStartLocation(entity.getStartLocation());
 
         return trip;
     }
@@ -48,6 +49,7 @@ public class TripMapper implements Mapper<TripEntity, Trip> {
         entity.setRoutePath(domain.getRoutePath());
         entity.setVersion(domain.getVersion());
         entity.setStatus(domain.getStatus());
+        entity.setStartLocation(domain.getStartLocation());
 
         return entity;
     }

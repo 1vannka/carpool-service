@@ -182,6 +182,9 @@
           Выезд: {{ new Date(activeTrip.departureTime).toLocaleString([], { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) }}
         </div>
         <div class="text-sm text-gray-700">
+          Время в пути: <span class="font-bold text-emerald-600">~{{ activeTrip.estimatedDuration }} мин</span>
+        </div>
+        <div class="text-sm text-gray-700">
           Авто: {{ activeTrip.carColor }} {{ activeTrip.carModel }} • <span class="uppercase font-mono">{{ activeTrip.carPlate }}</span>
         </div>
         <div class="text-sm text-gray-700">

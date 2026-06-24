@@ -3,6 +3,8 @@ package com.carpool.infrastructure.db.entity;
 import com.carpool.domain.model.trip.TripStatus;
 import jakarta.persistence.*;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
+
 import java.time.OffsetDateTime;
 
 @Entity
@@ -51,10 +53,13 @@ public class TripEntity {
     @Column(name = "status", nullable = false)
     private TripStatus status;
 
+    @Column(name = "start_location", nullable = false, columnDefinition = "geometry(Point,4326)")
+    private Point startLocation;
+
     public TripEntity() {
     }
 
-    public TripEntity(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status) {
+    public TripEntity(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status, Point startLocation) {
         this.id = id;
         this.driverId = driverId;
         this.officeId = officeId;
@@ -68,6 +73,7 @@ public class TripEntity {
         this.routePath = routePath;
         this.version = version;
         this.status = status;
+        this.startLocation = startLocation;
     }
 
     public Long getId() {
@@ -172,5 +178,13 @@ public class TripEntity {
 
     public void setStatus(TripStatus status) {
         this.status = status;
+    }
+
+    public Point getStartLocation() {
+        return startLocation;
+    }
+
+    public void setStartLocation(Point startLocation) {
+        this.startLocation = startLocation;
     }
 }

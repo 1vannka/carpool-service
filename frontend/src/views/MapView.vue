@@ -175,7 +175,7 @@ import Dialog from 'primevue/dialog';
 import Checkbox from 'primevue/checkbox';
 
 const authStore = useAuthStore();
-const { geocodeAddress, reverseGeocode } = useRouting();
+const { geocodeAddress, reverseGeocode, getMultiWaypointRoute } = useRouting();
 
 const mapContainerRef = ref<InstanceType<typeof MapContainer> | null>(null);
 const officeDialogRef = ref<InstanceType<typeof OfficeDialog> | null>(null);
@@ -309,6 +309,46 @@ const loadActiveTrip = async () => {
     console.error("Поездок не найдено или ошибка загрузки");
     activeTrip.value = null;
     activeDriverPassengers.value = [];
+  }
+};
+
+const rebuildTripRoute = async () => {
+  if (!activeTrip.value || !activeTrip.value.startLocation) return;
+
+  const targetOffice = allOffices.value.find(o => o.id === activeTrip.value!.officeId);
+  if (!targetOffice) return;
+
+  const approvedPickups = activeDriverPassengers.value
+    .filter(p => p.status === 'CONFIRMED')
+    .map(p => p.pickupLocation);
+
+  const waypoints = [
+    activeTrip.value.startLocation,
+    ...approvedPickups,
+    targetOffice.location
+  ];
+
+  try {
+    const routeData = await getMultiWaypointRoute(waypoints);
+
+    await tripService.updateTrip(activeTrip.value.id, {
+      officeId: activeTrip.value.officeId,
+      departureTime: activeTrip.value.departureTime,
+      estimatedDuration: routeData.durationMinutes,
+      totalSeats: activeTrip.value.totalSeats,
+      carModel: activeTrip.value.carModel,
+      carColor: activeTrip.value.carColor,
+      carPlate: activeTrip.value.carPlate,
+      routePath: routeData.routePath
+    });
+
+    currentDriverRoute.value = routeData.routePath;
+
+    activeTrip.value.routePath = routeData.routePath;
+    activeTrip.value.estimatedDuration = routeData.durationMinutes;
+
+  } catch (e) {
+    console.error("Ошибка автоматического перестроения маршрута:", e);
   }
 };
 
@@ -597,6 +637,32 @@ const handleSseNotification = async (notification: any) => {
   ]);
 };
 
+const previousConfirmedIds = ref<string | null>(null);
+
+watch(() => activeTrip.value?.id, (newId, oldId) => {
+  if (newId !== oldId) previousConfirmedIds.value = null;
+});
+
+watch(() => activeDriverPassengers.value, async (newPassengers) => {
+  if (!activeTrip.value || !activeTrip.value.startLocation) return;
+
+  const currentConfirmedIds = newPassengers
+    .filter(p => p.status === 'CONFIRMED')
+    .map(p => p.passengerId)
+    .sort()
+    .join(',');
+
+  if (previousConfirmedIds.value === null) {
+    previousConfirmedIds.value = currentConfirmedIds;
+    return;
+  }
+
+  if (previousConfirmedIds.value !== currentConfirmedIds) {
+    previousConfirmedIds.value = currentConfirmedIds;
+    await rebuildTripRoute();
+  }
+}, { deep: true });
+
 onMounted(async () => {
   await loadOffices();
   await loadActiveRideRequest();
@@ -606,7 +672,10 @@ onMounted(async () => {
   notificationService.connect(handleSseNotification);
 });
 
-const logout = () => authStore.logout();
+const logout = () => {
+  notificationService.disconnect();
+  authStore.logout();
+};
 </script>
 
 <style scoped>

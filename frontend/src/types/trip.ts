@@ -21,6 +21,7 @@ export interface TripResponse {
   carPlate: string;
   status: string;
   routePath: number[][];
+  startLocation: number[];
 }
 
 export interface TripDetailedResponse {
@@ -39,6 +40,7 @@ export interface TripDetailedResponse {
   carPlate: string;
   status: string;
   routePath: number[][];
+  startLocation: number[];
 }
 
 export enum BookingStatus {

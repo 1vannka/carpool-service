@@ -50,5 +50,8 @@ public record TripDetailedResponse(
         TripStatus status,
 
         @Schema(description = "Маршрут следования")
-        double[][] routePath
+        double[][] routePath,
+
+        @Schema(description = "Начальная точка маршрута водителя")
+        double[] startLocation
 ) {}
