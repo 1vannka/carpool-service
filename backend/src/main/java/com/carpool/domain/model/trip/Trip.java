@@ -1,6 +1,8 @@
 package com.carpool.domain.model.trip;
 
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Point;
+
 import java.time.OffsetDateTime;
 
 public class Trip {
@@ -17,11 +19,12 @@ public class Trip {
     private LineString routePath;
     private Long version;
     private TripStatus status;
+    private Point startLocation;
 
     public Trip() {
     }
 
-    public Trip(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status) {
+    public Trip(Long id, Long driverId, Long officeId, OffsetDateTime departureTime, Integer estimatedDuration, Integer totalSeats, Integer availableSeats, String carModel, String carColor, String carPlate, LineString routePath, Long version, TripStatus status, Point startLocation) {
         this.id = id;
         this.driverId = driverId;
         this.officeId = officeId;
@@ -35,6 +38,7 @@ public class Trip {
         this.routePath = routePath;
         this.version = version;
         this.status = status;
+        this.startLocation = startLocation;
     }
 
     public Long getId() {
@@ -139,5 +143,13 @@ public class Trip {
 
     public void setStatus(TripStatus status) {
         this.status = status;
+    }
+
+    public Point getStartLocation() {
+        return startLocation;
+    }
+
+    public void setStartLocation(Point startLocation) {
+        this.startLocation = startLocation;
     }
 }

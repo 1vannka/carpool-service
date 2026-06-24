@@ -3,6 +3,7 @@ import axios from 'axios';
 export function useRouting() {
   const ORS_API_KEY = import.meta.env.VITE_ORS_API_KEY;
   const DIRECTIONS_URL = 'https://api.openrouteservice.org/v2/directions/driving-car';
+  const WAYPOINTS_DIRECTIONS_URL = 'https://api.openrouteservice.org/v2/directions/driving-car/geojson';
   const GEOCODE_SEARCH_URL = 'https://api.openrouteservice.org/geocode/search';
   const GEOCODE_REVERSE_URL = 'https://api.openrouteservice.org/geocode/reverse';
 
@@ -22,6 +23,36 @@ export function useRouting() {
       return { routePath: geometry, durationMinutes };
     } catch (error) {
       console.error("Ошибка маршрутизации ORS:", error);
+      throw error;
+    }
+  };
+
+  const getMultiWaypointRoute = async (waypoints: number[][]) => {
+    try {
+      if (waypoints.length < 2) {
+        throw new Error("Маршрут должен содержать как минимум 2 точки (старт и финиш)");
+      }
+
+      const response = await axios.post(
+        WAYPOINTS_DIRECTIONS_URL,
+        {
+          coordinates: waypoints
+        },
+        {
+          headers: {
+            'Authorization': ORS_API_KEY,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      const data = response.data.features[0];
+      const geometry: number[][] = data.geometry.coordinates;
+      const durationMinutes = Math.round(data.properties.summary.duration / 60);
+
+      return { routePath: geometry, durationMinutes };
+    } catch (error) {
+      console.error("Ошибка при перестроении маршрута с waypoints (ORS):", error);
       throw error;
     }
   };
@@ -86,5 +117,5 @@ export function useRouting() {
     return properties.name || "Неизвестный адрес";
   };
 
-  return { getRoute, geocodeAddress, reverseGeocode };
+  return { getRoute, getMultiWaypointRoute, geocodeAddress, reverseGeocode };
 }

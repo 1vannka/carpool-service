@@ -3,6 +3,8 @@ import type { SseNotification } from '@/types/notification.ts';
 
 const BASE_URL = 'http://localhost:8080/api';
 
+let abortController: AbortController | null = null;
+
 export const notificationService = {
   connect(onMessage: (notification: SseNotification) => void) {
     const token = localStorage.getItem('access_token');
@@ -12,12 +14,21 @@ export const notificationService = {
       return;
     }
 
+    if (abortController) {
+      abortController.abort();
+      console.log('[SSE] Старое соединение принудительно разорвано');
+    }
+
+    abortController = new AbortController();
+
     fetchEventSource(`${BASE_URL}/notifications/subscribe`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'text/event-stream',
       },
+      signal: abortController.signal,
+
       onmessage(msg) {
         if (msg.event === 'INIT' || msg.event === 'PING') {
           console.log(`[SSE System]: ${msg.data}`);
@@ -40,5 +51,13 @@ export const notificationService = {
         console.error('[SSE] Ошибка соединения', err);
       }
     });
+  },
+
+  disconnect() {
+    if (abortController) {
+      abortController.abort();
+      abortController = null;
+      console.log('[SSE] Соединение отключено вручную');
+    }
   }
 };
