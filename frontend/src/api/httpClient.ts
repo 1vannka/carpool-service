@@ -2,11 +2,11 @@ import axios from 'axios';
 import { useAuthStore } from '../stores/authStore';
 
 const httpClient = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
-    'Content-Type': 'application/json'
-  }
-});
+    'Content-Type': 'application/json',
+  },
+})
 
 let isRefreshing = false;
 let failedQueue: Array<{ resolve: (value?: unknown) => void, reject: (reason?: any) => void }> = [];

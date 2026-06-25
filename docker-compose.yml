@@ -1,16 +1,20 @@
+version: '3.8'
+
 services:
   db:
     image: postgis/postgis:15-3.4
     container_name: carpool_db
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER:-root}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-root}
       POSTGRES_DB: carpool
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
   redis:
     image: redis:7.0-alpine
     container_name: carpool_redis
@@ -18,5 +22,37 @@ services:
       - "6379:6379"
     command: redis-server --save 60 1 --loglevel warning
     restart: always
+
+  backend:
+    build: ./backend
+    container_name: carpool_backend
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/carpool
+      REDIS_HOST: redis
+      DB_USERNAME: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root}
+      JWT_SECRET: ${JWT_SECRET:-supersecretkey123supersecretkey123supersecretkey123}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@company.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+    depends_on:
+      - db
+      - redis
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_ORS_API_KEY: ${VITE_ORS_API_KEY}
+    container_name: carpool_frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
 volumes:
   pgdata:

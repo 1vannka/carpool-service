@@ -58,9 +58,12 @@ export const useAuthStore = defineStore('auth', {
 
     async refreshSession() {
       try {
-        const response = await axios.post('http://localhost:8080/api/auth/refresh', {
-          refreshToken: this.refreshToken
-        });
+        const response = await axios.post(
+          `${import.meta.env.VITE_API_URL || '/api'}/auth/refresh`,
+          {
+            refreshToken: this.refreshToken,
+          },
+        )
 
         const newAccess = response.data.accessToken || response.data.access_token || response.data;
         const newRefresh = response.data.refreshToken || response.data.refresh_token || this.refreshToken;
@@ -83,8 +86,11 @@ export const useAuthStore = defineStore('auth', {
       localStorage.clear();
 
       if (tokenToRevoke) {
-        axios.post('http://localhost:8080/api/auth/logout', { refreshToken: tokenToRevoke })
-          .catch(() => {});
+        axios
+          .post(`${import.meta.env.VITE_API_URL || '/api'}/auth/logout`, {
+            refreshToken: tokenToRevoke,
+          })
+          .catch(() => {})
       }
 
       window.location.href = '/login';

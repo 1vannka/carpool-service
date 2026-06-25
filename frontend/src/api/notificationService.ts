@@ -1,7 +1,7 @@
 import { fetchEventSource } from '@microsoft/fetch-event-source';
 import type { SseNotification } from '@/types/notification.ts';
 
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
 let abortController: AbortController | null = null;
 
