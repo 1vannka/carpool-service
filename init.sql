@@ -33,7 +33,8 @@ CREATE TABLE trips (
                        car_plate VARCHAR(20) NOT NULL,
                        route_path GEOMETRY(LineString, 4326) NOT NULL,
                        version BIGINT NOT NULL DEFAULT 0,
-                       status VARCHAR(50) NOT NULL
+                       status VARCHAR(50) NOT NULL,
+                       start_location GEOMETRY(Point, 4326) NOT NULL
 );
 CREATE INDEX idx_trips_route_path ON trips USING GIST (route_path);
 
