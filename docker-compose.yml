@@ -27,7 +27,7 @@ services:
     build: ./backend
     container_name: carpool_backend
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     environment:
       DB_URL: jdbc:postgresql://db:5432/carpool
       REDIS_HOST: redis
