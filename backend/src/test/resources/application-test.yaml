@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  secret: "Y2F0Y2htZWlmeW91Y2FudGhpczBzdXBlcnNlY3JldGtleXRoYXRpc2xvbmcyNTZiaXQ="
+  expiration: 86400000
+
+app:
+  admin:
+    email: "admin@test.com"
+    password: "testpassword"
